@@ -1,0 +1,95 @@
+.esg-report-form-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.esg-form-header {
+  margin-bottom: 2rem;
+}
+
+.esg-form-header h1 {
+  font-family: 'Playfair Display', Georgia, serif;
+  color: #0d3b2c;
+  margin: 0 0 0.5rem;
+}
+
+.esg-form-header p {
+  color: #5a6c63;
+  margin: 0;
+}
+
+.esg-form .form-section {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e8f0ec;
+}
+
+.esg-form .form-section h2 {
+  font-size: 1.1rem;
+  color: #165a42;
+  margin: 0 0 1.25rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #7dd3a8;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem 1.5rem;
+}
+
+.form-grid .form-group.full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 600px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.esg-form .form-group {
+  margin-bottom: 0;
+}
+
+.esg-form .form-group label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #0d3b2c;
+  margin-bottom: 0.375rem;
+}
+
+.esg-form input,
+.esg-form select,
+.esg-form textarea {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid #c5d4ce;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+
+.esg-form input:focus,
+.esg-form select:focus,
+.esg-form textarea:focus {
+  outline: none;
+  border-color: #165a42;
+  box-shadow: 0 0 0 3px rgba(22, 90, 62, 0.1);
+}
+
+.form-actions {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: center;
+}
+
+.btn-lg {
+  padding: 1rem 2rem;
+  font-size: 1.05rem;
+}

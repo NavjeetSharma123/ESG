@@ -1,0 +1,65 @@
+.esg-report-result {
+  min-height: calc(100vh - 180px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.result-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 3rem;
+  max-width: 500px;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e8f0ec;
+}
+
+.result-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  background: #7dd3a8;
+  color: #0d3b2c;
+  font-size: 2rem;
+  font-weight: bold;
+  border-radius: 50%;
+  margin-bottom: 1.5rem;
+}
+
+.result-card h1 {
+  font-family: 'Playfair Display', Georgia, serif;
+  color: #0d3b2c;
+  margin: 0 0 1rem;
+  font-size: 1.5rem;
+}
+
+.result-card p {
+  color: #5a6c63;
+  margin: 0 0 1.5rem;
+  line-height: 1.6;
+}
+
+.result-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.result-actions .btn {
+  text-decoration: none;
+}
+
+.result-actions .btn-outline {
+  background: transparent;
+  color: #165a42;
+  border: 2px solid #165a42;
+}
+
+.result-actions .btn-outline:hover {
+  background: #f0f7f4;
+}
