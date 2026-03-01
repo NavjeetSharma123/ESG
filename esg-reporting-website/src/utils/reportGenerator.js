@@ -1,6 +1,9 @@
 import { jsPDF } from 'jspdf';
 
-const n = (val) => (val !== undefined && val !== '' ? String(val) : 'N/A');
+const n = (val) => {
+  if (Array.isArray(val) && val.length) return val.join(', ');
+  return val !== undefined && val !== '' ? String(val) : 'N/A';
+};
 
 export const generateESGReportPDF = (data) => {
   const doc = new jsPDF();
@@ -49,12 +52,18 @@ export const generateESGReportPDF = (data) => {
   doc.setTextColor(0, 0, 0);
   y = 45;
 
+  const esgFrameworks =
+    Array.isArray(data.esgFrameworks) && data.esgFrameworks.length
+      ? data.esgFrameworks.join(', ')
+      : 'N/A';
+
   addSection(
     '1. Company Information',
     `Company: ${n(data.companyName)}\n` +
       `Industry: ${n(data.industry)}\n` +
       `Reporting Period: ${n(data.reportingPeriod)}\n` +
       `Headquarters: ${n(data.hqLocation)}\n` +
+      `ESG Frameworks: ${esgFrameworks}\n` +
       `Employees: ${n(data.employeeCount)}\n` +
       `Revenue: ${n(data.revenue)}\n` +
       `Website: ${n(data.website)}`
@@ -113,7 +122,14 @@ export const generateESGReportPDF = (data) => {
 };
 
 export const generateESGReport = (data) => {
-  const n = (val) => (val !== undefined && val !== '' ? String(val) : 'N/A');
+  const n = (val) => {
+    if (Array.isArray(val) && val.length) return val.join(', ');
+    return val !== undefined && val !== '' ? String(val) : 'N/A';
+  };
+  const frameworks =
+    Array.isArray(data.esgFrameworks) && data.esgFrameworks.length
+      ? data.esgFrameworks.join(', ')
+      : 'N/A';
   return `
 ESG Report for ${n(data.companyName)}
 Reporting Period: ${n(data.reportingPeriod)}
@@ -121,6 +137,7 @@ Reporting Period: ${n(data.reportingPeriod)}
 1. COMPANY INFORMATION
    Industry: ${n(data.industry)}
    HQ: ${n(data.hqLocation)}
+   ESG Frameworks: ${frameworks}
    Employees: ${n(data.employeeCount)}
    Revenue: ${n(data.revenue)}
 

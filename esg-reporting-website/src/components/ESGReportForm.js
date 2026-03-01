@@ -3,6 +3,36 @@ import { useHistory } from 'react-router-dom';
 import { generateESGReportPDF } from '../utils/reportGenerator';
 import './ESGReportForm.css';
 
+const COUNTRY_FRAMEWORKS = {
+  'United States': ['US SEC Climate Disclosure', 'ISSB / SASB', 'TCFD', 'GRI'],
+  'United Kingdom': ['UK SDR', 'TCFD', 'ISSB / SASB', 'GRI'],
+  'European Union': ['CSRD / ESRS', 'SFDR', 'TCFD', 'ISSB / SASB', 'GRI'],
+  India: ['BRSR', 'GRI', 'ISSB / SASB', 'TCFD'],
+  Canada: ['ISSB / SASB', 'TCFD', 'GRI'],
+  Australia: ['ISSB / SASB', 'TCFD', 'GRI'],
+  Singapore: ['ISSB / SASB', 'TCFD', 'GRI'],
+  'United Arab Emirates': ['ISSB / SASB', 'TCFD', 'GRI'],
+  Other: ['GRI', 'ISSB / SASB', 'TCFD'],
+};
+
+const ALL_FRAMEWORKS = [
+  'GRI',
+  'ISSB / SASB',
+  'TCFD',
+  'UN Global Compact',
+  'CDP',
+  'CSRD / ESRS',
+  'SFDR',
+  'UK SDR',
+  'US SEC Climate Disclosure',
+  'BRSR',
+];
+
+const getFrameworksForCountry = (country) => {
+  if (!country) return [];
+  return COUNTRY_FRAMEWORKS[country] || COUNTRY_FRAMEWORKS.Other;
+};
+
 const ESGReportForm = () => {
   const history = useHistory();
   const [formData, setFormData] = useState({
@@ -11,6 +41,7 @@ const ESGReportForm = () => {
     industry: '',
     reportingPeriod: new Date().getFullYear().toString(),
     hqLocation: '',
+    esgFrameworks: [],
     employeeCount: '',
     revenue: '',
     website: '',
@@ -43,7 +74,24 @@ const ESGReportForm = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      if (name === 'hqLocation') {
+        const recommended = getFrameworksForCountry(value);
+        return { ...prev, hqLocation: value, esgFrameworks: recommended };
+      }
+      return { ...prev, [name]: value };
+    });
+  };
+
+  const handleFrameworkToggle = (framework) => {
+    setFormData((prev) => {
+      const current = Array.isArray(prev.esgFrameworks) ? prev.esgFrameworks : [];
+      const exists = current.includes(framework);
+      const updated = exists
+        ? current.filter((fw) => fw !== framework)
+        : [...current, framework];
+      return { ...prev, esgFrameworks: updated };
+    });
   };
 
   const handleSubmit = (e) => {
@@ -120,16 +168,49 @@ const ESGReportForm = () => {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="hqLocation">Headquarters Location *</label>
-              <input
-                type="text"
+              <label htmlFor="hqLocation">Headquarters Country *</label>
+              <select
                 id="hqLocation"
                 name="hqLocation"
                 value={formData.hqLocation}
                 onChange={handleChange}
-                placeholder="City, Country"
                 required
-              />
+              >
+                <option value="">Select country/region</option>
+                <option value="United States">United States</option>
+                <option value="United Kingdom">United Kingdom</option>
+                <option value="European Union">European Union</option>
+                <option value="India">India</option>
+                <option value="Canada">Canada</option>
+                <option value="Australia">Australia</option>
+                <option value="Singapore">Singapore</option>
+                <option value="United Arab Emirates">United Arab Emirates</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div className="form-group full">
+              <label htmlFor="esgFrameworks">ESG Reporting Frameworks</label>
+              <p className="field-helper">
+                Recommended for{' '}
+                {formData.hqLocation || 'selected country'}
+                : {getFrameworksForCountry(formData.hqLocation).join(', ') || 'N/A'}
+              </p>
+              <div id="esgFrameworks" className="checkbox-group">
+                {ALL_FRAMEWORKS.map((fw) => (
+                  <label key={fw} className="checkbox-item">
+                    <input
+                      type="checkbox"
+                      value={fw}
+                      checked={Array.isArray(formData.esgFrameworks) && formData.esgFrameworks.includes(fw)}
+                      onChange={() => handleFrameworkToggle(fw)}
+                    />
+                    <span>{fw}</span>
+                  </label>
+                ))}
+              </div>
+              <small>
+                Select all frameworks you report against. You can include frameworks beyond the recommended list.
+              </small>
             </div>
             <div className="form-group">
               <label htmlFor="employeeCount">Number of Employees *</label>

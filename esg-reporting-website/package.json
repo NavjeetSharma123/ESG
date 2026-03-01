@@ -4,8 +4,8 @@
   "description": "A web application for generating ESG reports and providing sustainability services.",
   "main": "src/index.js",
   "scripts": {
-    "start": "NODE_OPTIONS=--openssl-legacy-provider react-scripts start",
-    "build": "NODE_OPTIONS=--openssl-legacy-provider react-scripts build",
+    "start": "cross-env NODE_OPTIONS=--openssl-legacy-provider react-scripts start",
+    "build": "cross-env NODE_OPTIONS=--openssl-legacy-provider react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -20,6 +20,7 @@
     "react-scripts": "4.0.3"
   },
   "devDependencies": {
+    "cross-env": "^7.0.3",
     "eslint": "^7.14.0",
     "eslint-plugin-react": "^7.27.0"
   },
