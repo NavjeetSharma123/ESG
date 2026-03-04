@@ -72,7 +72,13 @@ export const generateESGReportPDF = (data) => {
   addSection(
     '2. Environmental Metrics',
     `Scope 1 Emissions (tCO₂e): ${n(data.scope1Emissions)}\n` +
+      `  - Fuel (stationary sources): ${n(data.scope1FuelStationaryDetails)}\n` +
+      `  - Company vehicle fuel: ${n(data.scope1CompanyVehicleDetails)}\n` +
+      `  - Refrigerants / AC leakage: ${n(data.scope1RefrigerantDetails)}\n` +
+      `  - Industrial process emissions: ${n(data.scope1ProcessEmissionsDetails)}\n` +
       `Scope 2 Emissions (tCO₂e): ${n(data.scope2Emissions)}\n` +
+      `  - Electricity consumption: ${n(data.scope2ElectricityDetails)}\n` +
+      `  - Purchased heating / cooling / steam: ${n(data.scope2ThermalEnergyDetails)}\n` +
       `Scope 3 Emissions (tCO₂e): ${n(data.scope3Emissions)}\n` +
       `Energy Consumption (MWh): ${n(data.energyConsumption)}\n` +
       `Renewable Energy %: ${n(data.renewableEnergyPercent)}\n` +
@@ -143,7 +149,13 @@ Reporting Period: ${n(data.reportingPeriod)}
 
 2. ENVIRONMENTAL
    Scope 1 (tCO2e): ${n(data.scope1Emissions)}
+     - Fuel (stationary): ${n(data.scope1FuelStationaryDetails)}
+     - Company vehicles: ${n(data.scope1CompanyVehicleDetails)}
+     - Refrigerants / AC: ${n(data.scope1RefrigerantDetails)}
+     - Process emissions: ${n(data.scope1ProcessEmissionsDetails)}
    Scope 2 (tCO2e): ${n(data.scope2Emissions)}
+     - Electricity: ${n(data.scope2ElectricityDetails)}
+     - Purchased heating / cooling / steam: ${n(data.scope2ThermalEnergyDetails)}
    Scope 3 (tCO2e): ${n(data.scope3Emissions)}
    Renewable %: ${n(data.renewableEnergyPercent)}
 

@@ -47,7 +47,13 @@ const ESGReportForm = () => {
     website: '',
     // Environmental
     scope1Emissions: '',
+    scope1FuelStationaryDetails: '',
+    scope1CompanyVehicleDetails: '',
+    scope1RefrigerantDetails: '',
+    scope1ProcessEmissionsDetails: '',
     scope2Emissions: '',
+    scope2ElectricityDetails: '',
+    scope2ThermalEnergyDetails: '',
     scope3Emissions: '',
     energyConsumption: '',
     renewableEnergyPercent: '',
@@ -253,7 +259,7 @@ const ESGReportForm = () => {
           <h2>Environmental Metrics</h2>
           <div className="form-grid">
             <div className="form-group">
-              <label htmlFor="scope1Emissions">Scope 1 Emissions (tCO₂e) *</label>
+              <h3><label htmlFor="scope1Emissions">Scope 1 Emissions (tCO₂e) *</label></h3>
               <input
                 type="text"
                 id="scope1Emissions"
@@ -261,11 +267,75 @@ const ESGReportForm = () => {
                 value={formData.scope1Emissions}
                 onChange={handleChange}
                 placeholder="Direct emissions"
-                required
+                hidden
               />
             </div>
+            <div className="form-group full">
+              <label htmlFor="scope1FuelStationaryDetails">
+                Fuel Consumption – Stationary Sources
+              </label>
+              <textarea
+                id="scope1FuelStationaryDetails"
+                name="scope1FuelStationaryDetails"
+                rows={3}
+                value={formData.scope1FuelStationaryDetails}
+                onChange={handleChange}
+                placeholder="Enter fuel used in boilers, generators, furnaces, etc.&#10;e.g. Plant A – Diesel – 3,500 – Liters – 2024 annual"
+              />
+              <small>
+                Include: fuel type (diesel, petrol, natural gas, LPG, coal, biomass), quantity consumed, unit of
+                measurement (liters, kg, m³), facility/location, and time period (monthly or annual).
+              </small>
+            </div>
+            <div className="form-group full">
+              <label htmlFor="scope1CompanyVehicleDetails">Company Vehicle Fuel Usage</label>
+              <textarea
+                id="scope1CompanyVehicleDetails"
+                name="scope1CompanyVehicleDetails"
+                rows={3}
+                value={formData.scope1CompanyVehicleDetails}
+                onChange={handleChange}
+                placeholder="Enter fuel used in company-owned vehicles.&#10;e.g. Delivery Truck – Diesel – 1,200 L – FY 2024"
+              />
+              <small>
+                Include: vehicle type, fuel type, fuel consumption or distance travelled, and any fuel purchase records.
+              </small>
+            </div>
+            <div className="form-group full">
+              <label htmlFor="scope1RefrigerantDetails">
+                Refrigerants / Air Conditioning Leakage
+              </label>
+              <textarea
+                id="scope1RefrigerantDetails"
+                name="scope1RefrigerantDetails"
+                rows={3}
+                value={formData.scope1RefrigerantDetails}
+                onChange={handleChange}
+                placeholder="Enter refrigerant use and leakage.&#10;e.g. HQ Chiller – R410a – 12 kg replaced – 2024 maintenance"
+              />
+              <small>
+                Include: refrigerant type (e.g. R134a, R410a), amount used or replaced, and relevant maintenance records.
+              </small>
+            </div>
+            <div className="form-group full">
+              <label htmlFor="scope1ProcessEmissionsDetails">
+                Industrial Process Emissions (if applicable)
+              </label>
+              <textarea
+                id="scope1ProcessEmissionsDetails"
+                name="scope1ProcessEmissionsDetails"
+                rows={3}
+                value={formData.scope1ProcessEmissionsDetails}
+                onChange={handleChange}
+                placeholder="Enter process-related emissions.&#10;e.g. Cement line – clinker production volume, kiln fuel mix, calcination data"
+              />
+              <small>
+                Include: production volumes, raw materials used, and process emissions data for relevant industries
+                (e.g. cement, steel, chemicals).
+              </small>
+            </div>
             <div className="form-group">
-              <label htmlFor="scope2Emissions">Scope 2 Emissions (tCO₂e) *</label>
+              <h3><label htmlFor="scope2Emissions">Scope 2 Emissions (tCO₂e) *</label></h3>
               <input
                 type="text"
                 id="scope2Emissions"
@@ -273,8 +343,39 @@ const ESGReportForm = () => {
                 value={formData.scope2Emissions}
                 onChange={handleChange}
                 placeholder="Indirect - purchased energy"
-                required
+                hidden
               />
+            </div>
+            <div className="form-group full">
+              <label htmlFor="scope2ElectricityDetails">Electricity Consumption</label>
+              <textarea
+                id="scope2ElectricityDetails"
+                name="scope2ElectricityDetails"
+                rows={3}
+                value={formData.scope2ElectricityDetails}
+                onChange={handleChange}
+                placeholder="Enter electricity consumed per facility.&#10;e.g. Office HQ – 42,000 – kWh – Utility ABC – FY 2024"
+              />
+              <small>
+                Include: electricity consumed, unit (kWh or MWh), facility location, utility provider, and time period.
+                Use data from electricity bills or energy management systems.
+              </small>
+            </div>
+            <div className="form-group full">
+              <label htmlFor="scope2ThermalEnergyDetails">
+                Purchased Heating / Cooling / Steam
+              </label>
+              <textarea
+                id="scope2ThermalEnergyDetails"
+                name="scope2ThermalEnergyDetails"
+                rows={3}
+                value={formData.scope2ThermalEnergyDetails}
+                onChange={handleChange}
+                placeholder="Enter purchased thermal energy.&#10;e.g. Purchased steam – 12,000 kWh – Supplier XYZ – FY 2024"
+              />
+              <small>
+                Include: type of energy (steam, heating, cooling), amount consumed, energy supplier, and reporting period.
+              </small>
             </div>
             <div className="form-group">
               <label htmlFor="scope3Emissions">Scope 3 Emissions (tCO₂e)</label>
