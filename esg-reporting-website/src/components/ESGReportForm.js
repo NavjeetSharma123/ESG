@@ -78,6 +78,9 @@ const ESGReportForm = () => {
     governanceInitiatives: '',
   });
 
+  const isGRISelected =
+    Array.isArray(formData.esgFrameworks) && formData.esgFrameworks.includes('GRI');
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => {
@@ -102,6 +105,15 @@ const ESGReportForm = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (isGRISelected) {
+      history.push({
+        pathname: '/gri-details',
+        state: { baseFormData: formData },
+      });
+      return;
+    }
+
     try {
       const pdfBlob = generateESGReportPDF(formData);
       const reportUrl = URL.createObjectURL(pdfBlob);
@@ -169,7 +181,7 @@ const ESGReportForm = () => {
                 name="reportingPeriod"
                 value={formData.reportingPeriod}
                 onChange={handleChange}
-                placeholder="e.g. 2024"
+                placeholder="e.g. 2026"
                 required
               />
             </div>
@@ -217,6 +229,13 @@ const ESGReportForm = () => {
               <small>
                 Select all frameworks you report against. You can include frameworks beyond the recommended list.
               </small>
+              {isGRISelected && (
+                <p className="field-helper" style={{ color: 'red' }}>
+                  You have selected GRI. After submitting this form, you will be taken to a separate
+                  page to provide detailed GRI-specific company information before generating the
+                  final report.
+                </p>
+              )}
             </div>
             <div className="form-group">
               <label htmlFor="employeeCount">Number of Employees *</label>
@@ -259,7 +278,7 @@ const ESGReportForm = () => {
           <h2>Environmental Metrics</h2>
           <div className="form-grid">
             <div className="form-group">
-              <h3><label htmlFor="scope1Emissions">Scope 1 Emissions (tCO₂e) *</label></h3>
+              <h3><b><label htmlFor="scope1Emissions">Scope 1 Emissions (tCO₂e) *</label></b></h3>
               <input
                 type="text"
                 id="scope1Emissions"
@@ -280,7 +299,7 @@ const ESGReportForm = () => {
                 rows={3}
                 value={formData.scope1FuelStationaryDetails}
                 onChange={handleChange}
-                placeholder="Enter fuel used in boilers, generators, furnaces, etc.&#10;e.g. Plant A – Diesel – 3,500 – Liters – 2024 annual"
+                placeholder="Enter fuel used in boilers, generators, furnaces, etc.&#10;e.g. Plant A – Diesel – 3,500 – Liters – 2026 annual"
               />
               <small>
                 Include: fuel type (diesel, petrol, natural gas, LPG, coal, biomass), quantity consumed, unit of
@@ -295,7 +314,7 @@ const ESGReportForm = () => {
                 rows={3}
                 value={formData.scope1CompanyVehicleDetails}
                 onChange={handleChange}
-                placeholder="Enter fuel used in company-owned vehicles.&#10;e.g. Delivery Truck – Diesel – 1,200 L – FY 2024"
+                placeholder="Enter fuel used in company-owned vehicles.&#10;e.g. Delivery Truck – Diesel – 1,200 L – FY 2026"
               />
               <small>
                 Include: vehicle type, fuel type, fuel consumption or distance travelled, and any fuel purchase records.
@@ -311,7 +330,7 @@ const ESGReportForm = () => {
                 rows={3}
                 value={formData.scope1RefrigerantDetails}
                 onChange={handleChange}
-                placeholder="Enter refrigerant use and leakage.&#10;e.g. HQ Chiller – R410a – 12 kg replaced – 2024 maintenance"
+                placeholder="Enter refrigerant use and leakage.&#10;e.g. HQ Chiller – R410a – 12 kg replaced – 2026 maintenance"
               />
               <small>
                 Include: refrigerant type (e.g. R134a, R410a), amount used or replaced, and relevant maintenance records.
@@ -335,7 +354,7 @@ const ESGReportForm = () => {
               </small>
             </div>
             <div className="form-group">
-              <h3><label htmlFor="scope2Emissions">Scope 2 Emissions (tCO₂e) *</label></h3>
+              <h3><b><label htmlFor="scope2Emissions">Scope 2 Emissions (tCO₂e) *</label></b></h3>
               <input
                 type="text"
                 id="scope2Emissions"
@@ -354,7 +373,7 @@ const ESGReportForm = () => {
                 rows={3}
                 value={formData.scope2ElectricityDetails}
                 onChange={handleChange}
-                placeholder="Enter electricity consumed per facility.&#10;e.g. Office HQ – 42,000 – kWh – Utility ABC – FY 2024"
+                placeholder="Enter electricity consumed per facility.&#10;e.g. Office HQ – 42,000 – kWh – Utility ABC – FY 2026"
               />
               <small>
                 Include: electricity consumed, unit (kWh or MWh), facility location, utility provider, and time period.
@@ -371,7 +390,7 @@ const ESGReportForm = () => {
                 rows={3}
                 value={formData.scope2ThermalEnergyDetails}
                 onChange={handleChange}
-                placeholder="Enter purchased thermal energy.&#10;e.g. Purchased steam – 12,000 kWh – Supplier XYZ – FY 2024"
+                placeholder="Enter purchased thermal energy.&#10;e.g. Purchased steam – 12,000 kWh – Supplier XYZ – FY 2026"
               />
               <small>
                 Include: type of energy (steam, heating, cooling), amount consumed, energy supplier, and reporting period.
@@ -613,7 +632,7 @@ const ESGReportForm = () => {
 
         <div className="form-actions">
           <button type="submit" className="btn btn-primary btn-lg">
-            Generate & Download Report
+            {isGRISelected ? 'Proceed to GRI Details' : 'Generate & Download Report'}
           </button>
         </div>
       </form>
