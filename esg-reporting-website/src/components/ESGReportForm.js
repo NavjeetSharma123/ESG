@@ -81,6 +81,10 @@ const ESGReportForm = () => {
   const isGRISelected =
     Array.isArray(formData.esgFrameworks) && formData.esgFrameworks.includes('GRI');
 
+  const isBRSRApplicable =
+    formData.hqLocation === 'India' ||
+    (Array.isArray(formData.esgFrameworks) && formData.esgFrameworks.includes('BRSR'));
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => {
@@ -634,6 +638,16 @@ const ESGReportForm = () => {
           <button type="submit" className="btn btn-primary btn-lg">
             {isGRISelected ? 'Proceed to GRI Details' : 'Generate & Download Report'}
           </button>
+          {isBRSRApplicable && (
+            <button
+              type="button"
+              className="btn btn-primary btn-lg"
+              style={{ marginLeft: '1rem' }}
+              onClick={() => history.push('/brsr')}
+            >
+              Open BRSR Module
+            </button>
+          )}
         </div>
       </form>
     </div>

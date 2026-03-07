@@ -7,6 +7,7 @@ import Services from './components/Services';
 import DemoForm from './components/DemoForm';
 import ESGReportForm from './components/ESGReportForm';
 import GRIDetailsForm from './components/GRIDetailsForm';
+import BRSRPage from './components/BRSRPage';
 import ESGReportResult from './components/ESGReportResult';
 import './assets/styles.css';
 
@@ -21,6 +22,7 @@ function App() {
           <Route path="/demo" component={DemoForm} />
           <Route path="/esg-report" component={ESGReportForm} />
           <Route path="/gri-details" component={GRIDetailsForm} />
+          <Route path="/brsr" component={BRSRPage} />
           <Route path="/esg-report-result" component={ESGReportResult} />
         </Switch>
         <Footer />
