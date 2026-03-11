@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
-import { generateESGReportPDF } from '../utils/reportGenerator';
 import './ESGReportForm.css';
 
 const GRIDetailsForm = () => {
@@ -97,48 +96,22 @@ const GRIDetailsForm = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    try {
-      const combinedData = {
-        ...baseFormData,
-        griUniversal: universal,
-        griEconomic: economic,
-        griEnvironmental: environmental,
-        griSocial: social,
-      };
+    const combinedData = {
+      baseFormData,
+      griUniversal: universal,
+      griEconomic: economic,
+      griEnvironmental: environmental,
+      griSocial: social,
+    };
 
-      const pdfBlob = generateESGReportPDF(combinedData);
-      const reportUrl = URL.createObjectURL(pdfBlob);
-
-      history.push({
-        pathname: '/esg-report-result',
-        state: {
-          reportUrl,
-          companyName: baseFormData.companyName || '',
-        },
-      });
-    } catch (err) {
-      console.error('GRI report generation failed:', err);
-      alert('GRI report generation failed. Please check required fields.');
-    }
+    history.push({
+      pathname: '/final-report',
+      state: {
+        source: 'GRI',
+        griData: combinedData,
+      },
+    });
   };
-
-  if (!baseFormData || !baseFormData.companyName) {
-    return (
-      <div className="esg-report-form-page">
-        <div className="esg-form-header">
-          <h1>GRI Company Details</h1>
-          <p>Please start from the ESG report form to provide basic company information.</p>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => history.push('/esg-report')}
-          >
-            Go to ESG Report Form
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="esg-report-form-page">
@@ -148,9 +121,11 @@ const GRIDetailsForm = () => {
           Provide detailed inputs aligned to GRI Universal Standards (GRI 1, 2, 3) and the
           Economic, Environmental, and Social series.
         </p>
-        <p>
-          <strong>Company:</strong> {baseFormData.companyName}
-        </p>
+        {baseFormData.companyName && (
+          <p>
+            <strong>Company:</strong> {baseFormData.companyName}
+          </p>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="esg-form">
@@ -987,7 +962,7 @@ const GRIDetailsForm = () => {
             Back to ESG Form
           </button>
           <button type="submit" className="btn btn-primary btn-lg">
-            Generate &amp; Download GRI Report
+            Submit details
           </button>
         </div>
       </form>

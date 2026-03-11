@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useHistory } from 'react-router-dom';
-import { generateESGReportPDF } from '../utils/reportGenerator';
 import './ESGReportForm.css';
 
 const COUNTRY_FRAMEWORKS = {
@@ -77,13 +76,8 @@ const ESGReportForm = () => {
     ethicsPolicy: '',
     governanceInitiatives: '',
   });
-
-  const isGRISelected =
-    Array.isArray(formData.esgFrameworks) && formData.esgFrameworks.includes('GRI');
-
-  const isBRSRApplicable =
-    formData.hqLocation === 'India' ||
-    (Array.isArray(formData.esgFrameworks) && formData.esgFrameworks.includes('BRSR'));
+  const [step, setStep] = useState(0);
+  const steps = ['Company', 'Environmental', 'Social', 'Governance'];
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -110,25 +104,10 @@ const ESGReportForm = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (isGRISelected) {
-      history.push({
-        pathname: '/gri-details',
-        state: { baseFormData: formData },
-      });
-      return;
-    }
-
-    try {
-      const pdfBlob = generateESGReportPDF(formData);
-      const reportUrl = URL.createObjectURL(pdfBlob);
-      history.push({
-        pathname: '/esg-report-result',
-        state: { reportUrl, companyName: formData.companyName },
-      });
-    } catch (err) {
-      console.error('Report generation failed:', err);
-      alert('Report generation failed. Please check required fields.');
-    }
+    history.push({
+      pathname: '/final-report',
+      state: { source: 'ESG', esgData: formData },
+    });
   };
 
   return (
@@ -138,9 +117,20 @@ const ESGReportForm = () => {
         <p>
           Complete the form below with your organization&apos;s data. Fields align with GRI, SASB, and TCFD frameworks.
         </p>
+        <p>
+          Step
+          {' '}
+          {step + 1}
+          /
+          {steps.length}
+          :
+          {' '}
+          {steps[step]}
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="esg-form">
+        {step === 0 && (
         <section className="form-section">
           <h2>Company Information</h2>
           <div className="form-grid">
@@ -233,13 +223,6 @@ const ESGReportForm = () => {
               <small>
                 Select all frameworks you report against. You can include frameworks beyond the recommended list.
               </small>
-              {isGRISelected && (
-                <p className="field-helper" style={{ color: 'red' }}>
-                  You have selected GRI. After submitting this form, you will be taken to a separate
-                  page to provide detailed GRI-specific company information before generating the
-                  final report.
-                </p>
-              )}
             </div>
             <div className="form-group">
               <label htmlFor="employeeCount">Number of Employees *</label>
@@ -277,7 +260,9 @@ const ESGReportForm = () => {
             </div>
           </div>
         </section>
+        )}
 
+        {step === 1 && (
         <section className="form-section">
           <h2>Environmental Metrics</h2>
           <div className="form-grid">
@@ -476,7 +461,9 @@ const ESGReportForm = () => {
             </div>
           </div>
         </section>
+        )}
 
+        {step === 2 && (
         <section className="form-section">
           <h2>Social Metrics</h2>
           <div className="form-grid">
@@ -555,7 +542,9 @@ const ESGReportForm = () => {
             </div>
           </div>
         </section>
+        )}
 
+        {step === 3 && (
         <section className="form-section">
           <h2>Governance Metrics</h2>
           <div className="form-grid">
@@ -633,19 +622,29 @@ const ESGReportForm = () => {
             </div>
           </div>
         </section>
+        )}
 
         <div className="form-actions">
-          <button type="submit" className="btn btn-primary btn-lg">
-            {isGRISelected ? 'Proceed to GRI Details' : 'Generate & Download Report'}
+          {step > 0 && (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setStep((prev) => Math.max(prev - 1, 0))}
+          >
+            Previous
           </button>
-          {isBRSRApplicable && (
+          )}
+          {step < steps.length - 1 ? (
             <button
               type="button"
               className="btn btn-primary btn-lg"
-              style={{ marginLeft: '1rem' }}
-              onClick={() => history.push('/brsr')}
+              onClick={() => setStep((prev) => Math.min(prev + 1, steps.length - 1))}
             >
-              Open BRSR Module
+              Next
+            </button>
+          ) : (
+            <button type="submit" className="btn btn-primary btn-lg">
+              Submit details
             </button>
           )}
         </div>

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useHistory } from 'react-router-dom';
 import './BRSRPage.css';
 
 const BRSRPage = () => {
+  const history = useHistory();
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState({
     // Module A – General Disclosures
@@ -59,11 +61,15 @@ const BRSRPage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Front-end only for now – just log the structured payload.
-    // This can later be wired to an API or PDF generator like the ESG flow.
     // eslint-disable-next-line no-console
     console.log('BRSR form submitted:', formData);
-    alert('BRSR details captured locally (demo). This can now be connected to your backend or reporting workflow.');
+    history.push({
+      pathname: '/final-report',
+      state: {
+        source: 'BRSR',
+        brsrData: formData,
+      },
+    });
   };
 
   return (
@@ -90,7 +96,12 @@ const BRSRPage = () => {
           ))}
         </div>
 
-        <form className="brsr-form" onSubmit={handleSubmit}>
+        <form
+          className="brsr-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+          }}
+        >
           {step === 0 && (
             <div className="brsr-card">
               <span className="brsr-module-label">Module A · General Disclosures (The “Basics”)</span>
@@ -553,17 +564,21 @@ const BRSRPage = () => {
               Previous module
             </button>
             {step < modules.length - 1 ? (
-              <button
-                type="button"
-                className="btn btn-primary brsr-nav-button"
-                onClick={handleNext}
-              >
-                Next module
-              </button>
+            <button
+              type="button"
+              className="btn btn-primary brsr-nav-button"
+              onClick={handleNext}
+            >
+              Next module
+            </button>
             ) : (
-              <button type="submit" className="btn btn-primary brsr-nav-button">
-                Submit BRSR details
-              </button>
+            <button
+              type="button"
+              className="btn btn-primary brsr-nav-button"
+              onClick={handleSubmit}
+            >
+              Submit BRSR details
+            </button>
             )}
           </div>
         </form>
