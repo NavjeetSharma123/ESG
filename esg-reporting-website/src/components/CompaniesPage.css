@@ -1,0 +1,87 @@
+.companies-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 40px 20px 60px;
+}
+
+.companies-header h1 {
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+.companies-header p {
+  color: #555;
+  margin-bottom: 24px;
+}
+
+.companies-list-section {
+  margin-top: 20px;
+}
+
+.companies-list-card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+
+.companies-list-header,
+.companies-list-row {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 1.5fr 3fr 1fr;
+  gap: 12px;
+  padding: 12px 20px;
+  align-items: flex-start;
+}
+
+.companies-list-header {
+  background: #0f172a;
+  color: #e5e7eb;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.companies-list-row:nth-child(odd) {
+  background: #f9fafb;
+}
+
+.companies-list-row:nth-child(even) {
+  background: #f3f4f6;
+}
+
+.companies-list-row span {
+  font-size: 0.9rem;
+  color: #111827;
+}
+
+.companies-name-button {
+  font-weight: 600;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  cursor: pointer;
+  color: #1d4ed8;
+}
+
+.companies-name-button:hover,
+.companies-name-button:focus {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .companies-list-header,
+  .companies-list-row {
+    grid-template-columns: 1.8fr 1.4fr 1.4fr;
+    grid-template-rows: auto auto;
+  }
+
+  .companies-list-header span:nth-child(4),
+  .companies-list-header span:nth-child(5),
+  .companies-list-row span:nth-child(4),
+  .companies-list-row span:nth-child(5) {
+    grid-column: 1 / -1;
+  }
+}
+

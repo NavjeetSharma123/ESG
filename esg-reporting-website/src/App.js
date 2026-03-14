@@ -10,6 +10,7 @@ import GRIDetailsForm from './components/GRIDetailsForm';
 import BRSRPage from './components/BRSRPage';
 import FinalReportPage from './components/FinalReportPage';
 import ESGReportResult from './components/ESGReportResult';
+import CompaniesPage from './components/CompaniesPage';
 import './assets/styles.css';
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
         <Switch>
           <Route path="/" exact component={HomePage} />
           <Route path="/services" component={Services} />
+          <Route path="/companies" component={CompaniesPage} />
           <Route path="/demo" component={DemoForm} />
           <Route path="/esg-report" component={ESGReportForm} />
           <Route path="/gri-details" component={GRIDetailsForm} />

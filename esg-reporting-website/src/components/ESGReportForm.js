@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import './ESGReportForm.css';
 
 const COUNTRY_FRAMEWORKS = {
@@ -34,47 +34,67 @@ const getFrameworksForCountry = (country) => {
 
 const ESGReportForm = () => {
   const history = useHistory();
-  const [formData, setFormData] = useState({
-    // Company Information
-    companyName: '',
-    industry: '',
-    reportingPeriod: new Date().getFullYear().toString(),
-    hqLocation: '',
-    esgFrameworks: [],
-    employeeCount: '',
-    revenue: '',
-    website: '',
-    // Environmental
-    scope1Emissions: '',
-    scope1FuelStationaryDetails: '',
-    scope1CompanyVehicleDetails: '',
-    scope1RefrigerantDetails: '',
-    scope1ProcessEmissionsDetails: '',
-    scope2Emissions: '',
-    scope2ElectricityDetails: '',
-    scope2ThermalEnergyDetails: '',
-    scope3Emissions: '',
-    energyConsumption: '',
-    renewableEnergyPercent: '',
-    waterUsage: '',
-    wasteGenerated: '',
-    wasteRecycledPercent: '',
-    environmentalInitiatives: '',
-    // Social
-    totalEmployees: '',
-    genderDiversityPercent: '',
-    trainingHoursPerEmployee: '',
-    safetyIncidents: '',
-    communityInvestment: '',
-    employeeTurnoverPercent: '',
-    socialInitiatives: '',
-    // Governance
-    boardSize: '',
-    independentDirectorsPercent: '',
-    sustainabilityCommittee: '',
-    esgTargetsSet: '',
-    ethicsPolicy: '',
-    governanceInitiatives: '',
+  const location = useLocation();
+  const presetCompany = (location && location.state && location.state.presetCompany) || null;
+
+  const [formData, setFormData] = useState(() => {
+    const base = {
+      // Company Information
+      companyName: '',
+      industry: '',
+      reportingPeriod: new Date().getFullYear().toString(),
+      hqLocation: '',
+      esgFrameworks: [],
+      employeeCount: '',
+      revenue: '',
+      website: '',
+      // Environmental
+      scope1Emissions: '',
+      scope1FuelStationaryDetails: '',
+      scope1CompanyVehicleDetails: '',
+      scope1RefrigerantDetails: '',
+      scope1ProcessEmissionsDetails: '',
+      scope2Emissions: '',
+      scope2ElectricityDetails: '',
+      scope2ThermalEnergyDetails: '',
+      scope3Emissions: '',
+      energyConsumption: '',
+      renewableEnergyPercent: '',
+      waterUsage: '',
+      wasteGenerated: '',
+      wasteRecycledPercent: '',
+      environmentalInitiatives: '',
+      // Social
+      totalEmployees: '',
+      genderDiversityPercent: '',
+      trainingHoursPerEmployee: '',
+      safetyIncidents: '',
+      communityInvestment: '',
+      employeeTurnoverPercent: '',
+      socialInitiatives: '',
+      // Governance
+      boardSize: '',
+      independentDirectorsPercent: '',
+      sustainabilityCommittee: '',
+      esgTargetsSet: '',
+      ethicsPolicy: '',
+      governanceInitiatives: '',
+    };
+
+    if (!presetCompany) {
+      return base;
+    }
+
+    const hqLocation = presetCompany.hqLocation || base.hqLocation;
+    const frameworks = hqLocation ? getFrameworksForCountry(hqLocation) : base.esgFrameworks;
+
+    return {
+      ...base,
+      companyName: presetCompany.name || base.companyName,
+      industry: presetCompany.industry || base.industry,
+      hqLocation,
+      esgFrameworks: frameworks,
+    };
   });
   const [step, setStep] = useState(0);
   const steps = ['Company', 'Environmental', 'Social', 'Governance'];
