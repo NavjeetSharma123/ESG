@@ -227,6 +227,67 @@
   color: #4b5563;
 }
 
+.final-framework-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.final-framework-card {
+  border-radius: 12px;
+  border: 1px solid #e3e7ed;
+  background: linear-gradient(180deg, #ffffff, #fbfdff);
+  padding: 12px 12px 10px;
+}
+
+.final-framework-card-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.final-framework-name {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 0.95rem;
+}
+
+.final-framework-percent {
+  font-weight: 800;
+  color: #065f46;
+  font-size: 0.95rem;
+}
+
+.final-framework-progress {
+  margin-top: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #eef2f7;
+  overflow: hidden;
+}
+
+.final-framework-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #22c55e, #a3e635);
+}
+
+.final-framework-meta {
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.78rem;
+  color: #475569;
+}
+
+.final-framework-remaining {
+  font-weight: 600;
+  color: #0f172a;
+}
+
 .final-improvement-section {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 2fr);
@@ -411,6 +472,10 @@
 
   .final-benchmark-section,
   .final-improvement-section {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .final-framework-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 

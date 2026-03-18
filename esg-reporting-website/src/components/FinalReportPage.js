@@ -107,6 +107,132 @@ const FinalReportPage = () => {
     }
   };
 
+  const countCompletion = (data, keys) => {
+    const safe = data && typeof data === 'object' ? data : {};
+    const total = Math.max(keys.length, 1);
+    const filled = keys.reduce((acc, key) => {
+      const value = safe[key];
+      if (value === undefined || value === null) return acc;
+      if (typeof value === 'string' && value.trim() === '') return acc;
+      if (Array.isArray(value) && value.length === 0) return acc;
+      return acc + 1;
+    }, 0);
+    const remaining = Math.max(total - filled, 0);
+    const percent = Math.round((filled / total) * 100);
+    return { total, filled, remaining, percent };
+  };
+
+  const ESG_FRAMEWORK_FIELDS = {
+    'GRI': [
+      'companyName', 'industry', 'reportingPeriod', 'hqLocation', 'employeeCount', 'revenue', 'website',
+      'scope1Emissions', 'scope2Emissions', 'scope3Emissions', 'energyConsumption', 'renewableEnergyPercent',
+      'waterUsage', 'wasteGenerated', 'wasteRecycledPercent', 'environmentalInitiatives',
+      'totalEmployees', 'genderDiversityPercent', 'trainingHoursPerEmployee', 'safetyIncidents',
+      'communityInvestment', 'employeeTurnoverPercent', 'socialInitiatives',
+      'boardSize', 'independentDirectorsPercent', 'sustainabilityCommittee', 'esgTargetsSet', 'ethicsPolicy',
+      'governanceInitiatives',
+    ],
+    'ISSB / SASB': [
+      'companyName', 'industry', 'reportingPeriod', 'hqLocation', 'revenue',
+      'scope1Emissions', 'scope2Emissions', 'scope3Emissions',
+      'energyConsumption', 'renewableEnergyPercent',
+      'boardSize', 'sustainabilityCommittee', 'esgTargetsSet',
+      'scope1FuelStationaryDetails', 'scope1CompanyVehicleDetails', 'scope1RefrigerantDetails',
+      'scope2ElectricityDetails',
+    ],
+    'TCFD': [
+      'companyName', 'industry', 'reportingPeriod', 'hqLocation',
+      'scope1Emissions', 'scope2Emissions', 'scope3Emissions',
+      'scope1FuelStationaryDetails', 'scope2ElectricityDetails',
+      'boardSize', 'independentDirectorsPercent', 'sustainabilityCommittee',
+      'esgTargetsSet', 'governanceInitiatives',
+    ],
+    'UN Global Compact': [
+      'companyName', 'industry', 'reportingPeriod', 'hqLocation', 'employeeCount',
+      'totalEmployees', 'genderDiversityPercent', 'trainingHoursPerEmployee', 'safetyIncidents',
+      'communityInvestment', 'employeeTurnoverPercent', 'socialInitiatives',
+      'ethicsPolicy', 'governanceInitiatives',
+    ],
+    'CDP': [
+      'companyName', 'industry', 'reportingPeriod', 'hqLocation',
+      'scope1Emissions', 'scope2Emissions', 'scope3Emissions',
+      'energyConsumption', 'renewableEnergyPercent',
+      'scope1FuelStationaryDetails', 'scope2ElectricityDetails',
+      'waterUsage', 'wasteGenerated', 'wasteRecycledPercent',
+    ],
+    'CSRD / ESRS': [
+      'companyName', 'industry', 'reportingPeriod', 'hqLocation', 'employeeCount', 'revenue',
+      'scope1Emissions', 'scope2Emissions', 'scope3Emissions',
+      'energyConsumption', 'renewableEnergyPercent', 'waterUsage', 'wasteGenerated', 'wasteRecycledPercent',
+      'totalEmployees', 'genderDiversityPercent', 'trainingHoursPerEmployee', 'safetyIncidents',
+      'boardSize', 'independentDirectorsPercent', 'sustainabilityCommittee', 'ethicsPolicy',
+    ],
+    'SFDR': [
+      'companyName', 'industry', 'reportingPeriod', 'hqLocation', 'revenue',
+      'scope1Emissions', 'scope2Emissions', 'scope3Emissions', 'energyConsumption', 'renewableEnergyPercent',
+    ],
+    'UK SDR': [
+      'companyName', 'industry', 'reportingPeriod', 'hqLocation',
+      'scope1Emissions', 'scope2Emissions', 'scope3Emissions',
+      'boardSize', 'sustainabilityCommittee', 'esgTargetsSet',
+    ],
+    'US SEC Climate Disclosure': [
+      'companyName', 'industry', 'reportingPeriod', 'hqLocation',
+      'scope1Emissions', 'scope2Emissions', 'scope3Emissions',
+      'scope1FuelStationaryDetails', 'scope2ElectricityDetails',
+      'governanceInitiatives', 'boardSize', 'sustainabilityCommittee',
+    ],
+    'BRSR': [
+      'companyName', 'industry', 'reportingPeriod', 'hqLocation', 'employeeCount',
+      'totalEmployees', 'genderDiversityPercent', 'safetyIncidents',
+      'scope1Emissions', 'scope2Emissions', 'scope3Emissions',
+      'ethicsPolicy', 'governanceInitiatives',
+    ],
+  };
+
+  const ALL_FRAMEWORKS_ORDER = [
+    'BRSR',
+    'GRI',
+    'ISSB / SASB',
+    'TCFD',
+    'UN Global Compact',
+    'CDP',
+    'CSRD / ESRS',
+    'SFDR',
+    'UK SDR',
+    'US SEC Climate Disclosure',
+  ];
+
+  const frameworksToShow = ALL_FRAMEWORKS_ORDER;
+
+  const frameworkCards = frameworksToShow.map((fw) => {
+    if (source === 'ESG' && esgData) {
+      const keys = ESG_FRAMEWORK_FIELDS[fw] || Object.keys(esgData || {});
+      const stats = countCompletion(esgData, keys);
+      return { framework: fw, ...stats };
+    }
+    if (source === 'BRSR' && brsrData) {
+      const keys = Object.keys(brsrData || {}).filter((k) => k !== 'esgFrameworks');
+      const stats = countCompletion(brsrData, keys);
+      return { framework: 'BRSR', ...stats };
+    }
+    if (source === 'GRI' && griData) {
+      const flat = {
+        ...(griData.baseFormData || {}),
+        ...(griData.griUniversal || {}),
+        ...(griData.griEconomic || {}),
+        ...(griData.griEnvironmental || {}),
+        ...(griData.griSocial || {}),
+      };
+      const keys = Object.keys(flat || {});
+      const stats = countCompletion(flat, keys);
+      return { framework: 'GRI', ...stats };
+    }
+    const keys = Object.keys(activeData || {});
+    const stats = countCompletion(activeData, keys);
+    return { framework: fw, ...stats };
+  });
+
   return (
     <div className="final-report-page">
       <header className="final-hero">
@@ -193,6 +319,45 @@ const FinalReportPage = () => {
           </div>
         </div>
 
+        <div className="final-trend-card">
+          <h2>Framework compliance</h2>
+          <p className="final-helper-text">
+            Completion status by framework based on the fields you provided.
+          </p>
+          <div className="final-framework-grid">
+            {frameworkCards.map((card) => (
+              <div className="final-framework-card" key={card.framework}>
+                <div className="final-framework-card-top">
+                  <div className="final-framework-name">{card.framework}</div>
+                  <div className="final-framework-percent">
+                    {card.percent}
+                    %
+                  </div>
+                </div>
+                <div className="final-framework-progress" aria-hidden="true">
+                  <div
+                    className="final-framework-progress-fill"
+                    style={{ width: `${Math.min(Math.max(card.percent, 0), 100)}%` }}
+                  />
+                </div>
+                <div className="final-framework-meta">
+                  <span>
+                    {card.filled}
+                    /
+                    {card.total}
+                    {' '}
+                    fields filled
+                  </span>
+                  <span className="final-framework-remaining">
+                    {card.remaining}
+                    {' '}
+                    remaining
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
         <div className="final-trend-card">
           <h2>Trend snapshot</h2>
           <p className="final-helper-text">
