@@ -79,6 +79,37 @@ const ESGReportForm = () => {
       esgTargetsSet: '',
       ethicsPolicy: '',
       governanceInitiatives: '',
+      // CDP questionnaire
+      cdpBoardReview: '',
+      cdpBoardLastReviewDate: '',
+      cdpBoardTopics: '',
+      cdpClimateResponsibleTitles: '',
+      cdpExecCompLinked: '',
+      cdpExecCompDetails: '',
+      cdpRisksSummary: '',
+      cdpOpportunitiesSummary: '',
+      cdpStrategyIntegrated: '',
+      cdpStrategyExamples: '',
+      cdpTransitionPlan: '',
+      cdpTransitionPlanDetails: '',
+      cdpTcfdAlignment: '',
+      cdpTargetsHave: '',
+      cdpTargetsDetails: '',
+      cdpEmissionsCurrentYear: '',
+      cdpEmissionsMethodology: '',
+      cdpEmissionsHistory: '',
+      cdpEnergyTotal: '',
+      cdpEnergyRenewable: '',
+      cdpEnergyIntensity: '',
+      cdpEmissionsBreakdown: '',
+      cdpTopEmissionSources: '',
+      cdpCarbonPricing: '',
+      cdpCarbonPricingDetails: '',
+      cdpSupplierEngagementPercent: '',
+      cdpSupplierRequirements: '',
+      cdpInitiativesCommitments: '',
+      cdpVerificationStatus: '',
+      cdpVerificationDetails: '',
     };
 
     if (!presetCompany) {
@@ -498,6 +529,369 @@ const ESGReportForm = () => {
               </div>
             </>
             )}
+
+            {hasFramework('CDP') && (
+            <div className="form-group full">
+              <h3>CDP Climate Questionnaire</h3>
+              <p className="field-helper">
+                Complete the CDP climate module below (Sections A–J).
+              </p>
+              <div className="form-grid">
+                <h3>A. Governance</h3>
+                <div className="form-group">
+                  <label htmlFor="cdpBoardReview">Does your Board review climate issues at least once per year?</label>
+                  <select
+                    id="cdpBoardReview"
+                    name="cdpBoardReview"
+                    value={formData.cdpBoardReview}
+                    onChange={handleChange}
+                  >
+                    <option value="">Select</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="cdpBoardLastReviewDate">Date of last review</label>
+                  <input
+                    type="text"
+                    id="cdpBoardLastReviewDate"
+                    name="cdpBoardLastReviewDate"
+                    value={formData.cdpBoardLastReviewDate}
+                    onChange={handleChange}
+                    placeholder="e.g. 2026-03-31"
+                  />
+                </div>
+                <div className="form-group full">
+                  <label htmlFor="cdpBoardTopics">Topics discussed</label>
+                  <textarea
+                    id="cdpBoardTopics"
+                    name="cdpBoardTopics"
+                    rows={3}
+                    value={formData.cdpBoardTopics}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="form-group full">
+                  <label htmlFor="cdpClimateResponsibleTitles">Job titles responsible for climate management</label>
+                  <textarea
+                    id="cdpClimateResponsibleTitles"
+                    name="cdpClimateResponsibleTitles"
+                    rows={2}
+                    value={formData.cdpClimateResponsibleTitles}
+                    onChange={handleChange}
+                    placeholder="e.g. Chief Sustainability Officer, Head of ESG..."
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="cdpExecCompLinked">Are climate KPIs in executive compensation?</label>
+                  <select
+                    id="cdpExecCompLinked"
+                    name="cdpExecCompLinked"
+                    value={formData.cdpExecCompLinked}
+                    onChange={handleChange}
+                  >
+                    <option value="">Select</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+                <div className="form-group full">
+                  <label htmlFor="cdpExecCompDetails">KPI name, metric and % of bonus linked</label>
+                  <textarea
+                    id="cdpExecCompDetails"
+                    name="cdpExecCompDetails"
+                    rows={3}
+                    value={formData.cdpExecCompDetails}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <h3>B. Risks &amp; Opportunities</h3>
+                <div className="form-group full">
+                  <label htmlFor="cdpRisksSummary">
+                    Climate-related risks (up to 10): type, description, time horizon, financial impact, likelihood
+                  </label>
+                  <textarea
+                    id="cdpRisksSummary"
+                    name="cdpRisksSummary"
+                    rows={4}
+                    value={formData.cdpRisksSummary}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="form-group full">
+                  <label htmlFor="cdpOpportunitiesSummary">
+                    Climate-related opportunities (up to 5): description, financial benefit, time horizon
+                  </label>
+                  <textarea
+                    id="cdpOpportunitiesSummary"
+                    name="cdpOpportunitiesSummary"
+                    rows={4}
+                    value={formData.cdpOpportunitiesSummary}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <h3>C. Business Strategy</h3>
+                <div className="form-group">
+                  <label htmlFor="cdpStrategyIntegrated">Incorporated into documented strategy?</label>
+                  <select
+                    id="cdpStrategyIntegrated"
+                    name="cdpStrategyIntegrated"
+                    value={formData.cdpStrategyIntegrated}
+                    onChange={handleChange}
+                  >
+                    <option value="">Select</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+                <div className="form-group full">
+                  <label htmlFor="cdpStrategyExamples">Examples</label>
+                  <textarea
+                    id="cdpStrategyExamples"
+                    name="cdpStrategyExamples"
+                    rows={3}
+                    value={formData.cdpStrategyExamples}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="cdpTransitionPlan">Formal transition plan aligned with net-zero?</label>
+                  <select
+                    id="cdpTransitionPlan"
+                    name="cdpTransitionPlan"
+                    value={formData.cdpTransitionPlan}
+                    onChange={handleChange}
+                  >
+                    <option value="">Select</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+                <div className="form-group full">
+                  <label htmlFor="cdpTransitionPlanDetails">Target year and interim milestones</label>
+                  <textarea
+                    id="cdpTransitionPlanDetails"
+                    name="cdpTransitionPlanDetails"
+                    rows={3}
+                    value={formData.cdpTransitionPlanDetails}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="cdpTcfdAlignment">TCFD alignment</label>
+                  <select
+                    id="cdpTcfdAlignment"
+                    name="cdpTcfdAlignment"
+                    value={formData.cdpTcfdAlignment}
+                    onChange={handleChange}
+                  >
+                    <option value="">Select</option>
+                    <option value="Fully aligned">Fully aligned</option>
+                    <option value="Partially aligned">Partially aligned</option>
+                    <option value="Not aligned">Not aligned</option>
+                  </select>
+                </div>
+
+                <h3>D. Targets &amp; Performance</h3>
+                <div className="form-group">
+                  <label htmlFor="cdpTargetsHave">Emissions reduction targets?</label>
+                  <select
+                    id="cdpTargetsHave"
+                    name="cdpTargetsHave"
+                    value={formData.cdpTargetsHave}
+                    onChange={handleChange}
+                  >
+                    <option value="">Select</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+                <div className="form-group full">
+                  <label htmlFor="cdpTargetsDetails">Targets details</label>
+                  <textarea
+                    id="cdpTargetsDetails"
+                    name="cdpTargetsDetails"
+                    rows={3}
+                    value={formData.cdpTargetsDetails}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <h3>E. Emissions Data</h3>
+                <div className="form-group full">
+                  <label htmlFor="cdpEmissionsCurrentYear">Current year emissions (Scopes 1/2/3)</label>
+                  <textarea
+                    id="cdpEmissionsCurrentYear"
+                    name="cdpEmissionsCurrentYear"
+                    rows={3}
+                    value={formData.cdpEmissionsCurrentYear}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="cdpEmissionsMethodology">Calculation methodology</label>
+                  <input
+                    type="text"
+                    id="cdpEmissionsMethodology"
+                    name="cdpEmissionsMethodology"
+                    value={formData.cdpEmissionsMethodology}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="form-group full">
+                  <label htmlFor="cdpEmissionsHistory">Past 3 reporting years emissions</label>
+                  <textarea
+                    id="cdpEmissionsHistory"
+                    name="cdpEmissionsHistory"
+                    rows={3}
+                    value={formData.cdpEmissionsHistory}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <h3>F. Energy</h3>
+                <div className="form-group">
+                  <label htmlFor="cdpEnergyTotal">Total energy consumption (MWh)</label>
+                  <input
+                    type="text"
+                    id="cdpEnergyTotal"
+                    name="cdpEnergyTotal"
+                    value={formData.cdpEnergyTotal}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="cdpEnergyRenewable">Renewable energy (MWh and %)</label>
+                  <input
+                    type="text"
+                    id="cdpEnergyRenewable"
+                    name="cdpEnergyRenewable"
+                    value={formData.cdpEnergyRenewable}
+                    onChange={handleChange}
+                    placeholder="e.g. 5,000 MWh (35%)"
+                  />
+                </div>
+                <div className="form-group full">
+                  <label htmlFor="cdpEnergyIntensity">Energy intensity (denominator + value)</label>
+                  <input
+                    type="text"
+                    id="cdpEnergyIntensity"
+                    name="cdpEnergyIntensity"
+                    value={formData.cdpEnergyIntensity}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <h3>G. Emissions Breakdown</h3>
+                <div className="form-group full">
+                  <label htmlFor="cdpEmissionsBreakdown">Scope 1/2 breakdown by facility/geography and source</label>
+                  <textarea
+                    id="cdpEmissionsBreakdown"
+                    name="cdpEmissionsBreakdown"
+                    rows={3}
+                    value={formData.cdpEmissionsBreakdown}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="form-group full">
+                  <label htmlFor="cdpTopEmissionSources">Top 3 emission sources</label>
+                  <textarea
+                    id="cdpTopEmissionSources"
+                    name="cdpTopEmissionSources"
+                    rows={2}
+                    value={formData.cdpTopEmissionSources}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <h3>H. Carbon Pricing</h3>
+                <div className="form-group">
+                  <label htmlFor="cdpCarbonPricing">Internal carbon price?</label>
+                  <select
+                    id="cdpCarbonPricing"
+                    name="cdpCarbonPricing"
+                    value={formData.cdpCarbonPricing}
+                    onChange={handleChange}
+                  >
+                    <option value="">Select</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+                <div className="form-group full">
+                  <label htmlFor="cdpCarbonPricingDetails">Details (price, type, decisions influenced)</label>
+                  <textarea
+                    id="cdpCarbonPricingDetails"
+                    name="cdpCarbonPricingDetails"
+                    rows={3}
+                    value={formData.cdpCarbonPricingDetails}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <h3>I. Engagement</h3>
+                <div className="form-group">
+                  <label htmlFor="cdpSupplierEngagementPercent">% of suppliers engaged (by spend)</label>
+                  <input
+                    type="text"
+                    id="cdpSupplierEngagementPercent"
+                    name="cdpSupplierEngagementPercent"
+                    value={formData.cdpSupplierEngagementPercent}
+                    onChange={handleChange}
+                    placeholder="e.g. 40"
+                  />
+                </div>
+                <div className="form-group full">
+                  <label htmlFor="cdpSupplierRequirements">Supplier emissions reporting requirement (Yes/No + details)</label>
+                  <textarea
+                    id="cdpSupplierRequirements"
+                    name="cdpSupplierRequirements"
+                    rows={3}
+                    value={formData.cdpSupplierRequirements}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="form-group full">
+                  <label htmlFor="cdpInitiativesCommitments">Commitments (SBTi etc.) (Yes/No + details)</label>
+                  <textarea
+                    id="cdpInitiativesCommitments"
+                    name="cdpInitiativesCommitments"
+                    rows={3}
+                    value={formData.cdpInitiativesCommitments}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <h3>J. Verification</h3>
+                <div className="form-group">
+                  <label htmlFor="cdpVerificationStatus">Scope 1 &amp; 2 externally verified?</label>
+                  <select
+                    id="cdpVerificationStatus"
+                    name="cdpVerificationStatus"
+                    value={formData.cdpVerificationStatus}
+                    onChange={handleChange}
+                  >
+                    <option value="">Select</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+                <div className="form-group full">
+                  <label htmlFor="cdpVerificationDetails">Verification details</label>
+                  <textarea
+                    id="cdpVerificationDetails"
+                    name="cdpVerificationDetails"
+                    rows={3}
+                    value={formData.cdpVerificationDetails}
+                    onChange={handleChange}
+                  />
+                </div>
+              </div>
+            </div>
+            )}
           </div>
         </section>
         )}
@@ -678,6 +1072,440 @@ const ESGReportForm = () => {
             </>
             )}
           </div>
+        </section>
+        )}
+
+        {false && (
+        <section className="form-section">
+          <h2>CDP Climate Questionnaire</h2>
+          {!hasFramework('CDP') && (
+          <p className="field-helper">
+            This section is only required if you selected the CDP framework above.
+          </p>
+          )}
+          {hasFramework('CDP') && (
+          <>
+            <h3>A. Governance</h3>
+            <div className="form-grid">
+              <div className="form-group">
+                <label htmlFor="cdpBoardReview">Does your Board review climate issues at least once per year?</label>
+                <select
+                  id="cdpBoardReview"
+                  name="cdpBoardReview"
+                  value={formData.cdpBoardReview}
+                  onChange={handleChange}
+                >
+                  <option value="">Select</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="cdpBoardLastReviewDate">Date of last Board review (if applicable)</label>
+                <input
+                  type="text"
+                  id="cdpBoardLastReviewDate"
+                  name="cdpBoardLastReviewDate"
+                  value={formData.cdpBoardLastReviewDate}
+                  onChange={handleChange}
+                  placeholder="e.g. 2026-03-31"
+                />
+              </div>
+              <div className="form-group full">
+                <label htmlFor="cdpBoardTopics">Topics discussed at last Board review</label>
+                <textarea
+                  id="cdpBoardTopics"
+                  name="cdpBoardTopics"
+                  rows={3}
+                  value={formData.cdpBoardTopics}
+                  onChange={handleChange}
+                  placeholder="Summarise key climate-related topics discussed..."
+                />
+              </div>
+              <div className="form-group full">
+                <label htmlFor="cdpClimateResponsibleTitles">
+                  Job titles responsible for climate-related management
+                </label>
+                <textarea
+                  id="cdpClimateResponsibleTitles"
+                  name="cdpClimateResponsibleTitles"
+                  rows={2}
+                  value={formData.cdpClimateResponsibleTitles}
+                  onChange={handleChange}
+                  placeholder="e.g. Chief Sustainability Officer, Head of ESG, Plant Manager..."
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="cdpExecCompLinked">Are climate KPIs in executive compensation?</label>
+                <select
+                  id="cdpExecCompLinked"
+                  name="cdpExecCompLinked"
+                  value={formData.cdpExecCompLinked}
+                  onChange={handleChange}
+                >
+                  <option value="">Select</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
+              <div className="form-group full">
+                <label htmlFor="cdpExecCompDetails">
+                  If yes, KPI name, metric and % of bonus linked
+                </label>
+                <textarea
+                  id="cdpExecCompDetails"
+                  name="cdpExecCompDetails"
+                  rows={3}
+                  value={formData.cdpExecCompDetails}
+                  onChange={handleChange}
+                  placeholder="e.g. Scope 1+2 reduction, energy efficiency, CDP score..."
+                />
+              </div>
+            </div>
+
+            <h3>B. Risks &amp; Opportunities</h3>
+            <div className="form-grid">
+              <div className="form-group full">
+                <label htmlFor="cdpRisksSummary">
+                  Climate-related risks (up to 10) with type, description, time horizon, impact and likelihood
+                </label>
+                <textarea
+                  id="cdpRisksSummary"
+                  name="cdpRisksSummary"
+                  rows={4}
+                  value={formData.cdpRisksSummary}
+                  onChange={handleChange}
+                  placeholder="Use a bullet or table-style format to list risks, type (physical/transition), time horizon, impact and likelihood..."
+                />
+              </div>
+              <div className="form-group full">
+                <label htmlFor="cdpOpportunitiesSummary">
+                  Climate-related opportunities (up to 5) with description, financial benefit and time horizon
+                </label>
+                <textarea
+                  id="cdpOpportunitiesSummary"
+                  name="cdpOpportunitiesSummary"
+                  rows={4}
+                  value={formData.cdpOpportunitiesSummary}
+                  onChange={handleChange}
+                  placeholder="Describe opportunities such as new products, efficiency gains, renewable projects..."
+                />
+              </div>
+            </div>
+
+            <h3>C. Business Strategy</h3>
+            <div className="form-grid">
+              <div className="form-group">
+                <label htmlFor="cdpStrategyIntegrated">
+                  Is climate change integrated into documented business strategy?
+                </label>
+                <select
+                  id="cdpStrategyIntegrated"
+                  name="cdpStrategyIntegrated"
+                  value={formData.cdpStrategyIntegrated}
+                  onChange={handleChange}
+                >
+                  <option value="">Select</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
+              <div className="form-group full">
+                <label htmlFor="cdpStrategyExamples">
+                  If yes, provide examples (products, capex decisions, etc.)
+                </label>
+                <textarea
+                  id="cdpStrategyExamples"
+                  name="cdpStrategyExamples"
+                  rows={3}
+                  value={formData.cdpStrategyExamples}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="cdpTransitionPlan">
+                  Do you have a formal transition plan aligned with net-zero?
+                </label>
+                <select
+                  id="cdpTransitionPlan"
+                  name="cdpTransitionPlan"
+                  value={formData.cdpTransitionPlan}
+                  onChange={handleChange}
+                >
+                  <option value="">Select</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
+              <div className="form-group full">
+                <label htmlFor="cdpTransitionPlanDetails">
+                  If yes, target year, interim milestones and key levers
+                </label>
+                <textarea
+                  id="cdpTransitionPlanDetails"
+                  name="cdpTransitionPlanDetails"
+                  rows={3}
+                  value={formData.cdpTransitionPlanDetails}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="cdpTcfdAlignment">
+                  Alignment with TCFD recommendations
+                </label>
+                <select
+                  id="cdpTcfdAlignment"
+                  name="cdpTcfdAlignment"
+                  value={formData.cdpTcfdAlignment}
+                  onChange={handleChange}
+                >
+                  <option value="">Select</option>
+                  <option value="Fully aligned">Fully aligned</option>
+                  <option value="Partially aligned">Partially aligned</option>
+                  <option value="Not aligned">Not aligned</option>
+                </select>
+              </div>
+            </div>
+
+            <h3>D. Targets &amp; Performance</h3>
+            <div className="form-grid">
+              <div className="form-group">
+                <label htmlFor="cdpTargetsHave">Do you have emissions reduction targets?</label>
+                <select
+                  id="cdpTargetsHave"
+                  name="cdpTargetsHave"
+                  value={formData.cdpTargetsHave}
+                  onChange={handleChange}
+                >
+                  <option value="">Select</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
+              <div className="form-group full">
+                <label htmlFor="cdpTargetsDetails">
+                  For each target, describe type, base year, target year, % reduction and % achieved
+                </label>
+                <textarea
+                  id="cdpTargetsDetails"
+                  name="cdpTargetsDetails"
+                  rows={3}
+                  value={formData.cdpTargetsDetails}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <h3>E. Emissions Data</h3>
+            <div className="form-grid">
+              <div className="form-group full">
+                <label htmlFor="cdpEmissionsCurrentYear">
+                  Current reporting year emissions (Scope 1, Scope 2 – location/market, Scope 3 with categories)
+                </label>
+                <textarea
+                  id="cdpEmissionsCurrentYear"
+                  name="cdpEmissionsCurrentYear"
+                  rows={3}
+                  value={formData.cdpEmissionsCurrentYear}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="cdpEmissionsMethodology">
+                  Calculation methodology (e.g. GHG Protocol)
+                </label>
+                <input
+                  type="text"
+                  id="cdpEmissionsMethodology"
+                  name="cdpEmissionsMethodology"
+                  value={formData.cdpEmissionsMethodology}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="form-group full">
+                <label htmlFor="cdpEmissionsHistory">
+                  Emissions for the past 3 reporting years
+                </label>
+                <textarea
+                  id="cdpEmissionsHistory"
+                  name="cdpEmissionsHistory"
+                  rows={3}
+                  value={formData.cdpEmissionsHistory}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <h3>F. Energy</h3>
+            <div className="form-grid">
+              <div className="form-group">
+                <label htmlFor="cdpEnergyTotal">Total energy consumption (MWh)</label>
+                <input
+                  type="text"
+                  id="cdpEnergyTotal"
+                  name="cdpEnergyTotal"
+                  value={formData.cdpEnergyTotal}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="cdpEnergyRenewable">
+                  Renewable energy consumption (MWh and % of total)
+                </label>
+                <input
+                  type="text"
+                  id="cdpEnergyRenewable"
+                  name="cdpEnergyRenewable"
+                  value={formData.cdpEnergyRenewable}
+                  onChange={handleChange}
+                  placeholder="e.g. 5,000 MWh (35%)"
+                />
+              </div>
+              <div className="form-group full">
+                <label htmlFor="cdpEnergyIntensity">
+                  Energy intensity and denominator (e.g. per unit production)
+                </label>
+                <input
+                  type="text"
+                  id="cdpEnergyIntensity"
+                  name="cdpEnergyIntensity"
+                  value={formData.cdpEnergyIntensity}
+                  onChange={handleChange}
+                  placeholder="e.g. 1.2 MWh per tonne of product"
+                />
+              </div>
+            </div>
+
+            <h3>G. Emissions Breakdown</h3>
+            <div className="form-grid">
+              <div className="form-group full">
+                <label htmlFor="cdpEmissionsBreakdown">
+                  Breakdown of Scope 1 and 2 by facility/geography and source
+                </label>
+                <textarea
+                  id="cdpEmissionsBreakdown"
+                  name="cdpEmissionsBreakdown"
+                  rows={3}
+                  value={formData.cdpEmissionsBreakdown}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="form-group full">
+                <label htmlFor="cdpTopEmissionSources">
+                  Top 3 emission sources and approximate contribution
+                </label>
+                <textarea
+                  id="cdpTopEmissionSources"
+                  name="cdpTopEmissionSources"
+                  rows={2}
+                  value={formData.cdpTopEmissionSources}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <h3>H. Carbon Pricing</h3>
+            <div className="form-grid">
+              <div className="form-group">
+                <label htmlFor="cdpCarbonPricing">Do you apply an internal carbon price?</label>
+                <select
+                  id="cdpCarbonPricing"
+                  name="cdpCarbonPricing"
+                  value={formData.cdpCarbonPricing}
+                  onChange={handleChange}
+                >
+                  <option value="">Select</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
+              <div className="form-group full">
+                <label htmlFor="cdpCarbonPricingDetails">
+                  If yes, price per ton, type and decisions influenced
+                </label>
+                <textarea
+                  id="cdpCarbonPricingDetails"
+                  name="cdpCarbonPricingDetails"
+                  rows={3}
+                  value={formData.cdpCarbonPricingDetails}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <h3>I. Engagement</h3>
+            <div className="form-grid">
+              <div className="form-group">
+                <label htmlFor="cdpSupplierEngagementPercent">
+                  % of suppliers (by spend) engaged on climate issues
+                </label>
+                <input
+                  type="text"
+                  id="cdpSupplierEngagementPercent"
+                  name="cdpSupplierEngagementPercent"
+                  value={formData.cdpSupplierEngagementPercent}
+                  onChange={handleChange}
+                  placeholder="e.g. 40"
+                />
+              </div>
+              <div className="form-group full">
+                <label htmlFor="cdpSupplierRequirements">
+                  Do you require suppliers to report emissions? Add details.
+                </label>
+                <textarea
+                  id="cdpSupplierRequirements"
+                  name="cdpSupplierRequirements"
+                  rows={3}
+                  value={formData.cdpSupplierRequirements}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="form-group full">
+                <label htmlFor="cdpInitiativesCommitments">
+                  Commitments to SBTi or similar initiatives (Yes/No and details)
+                </label>
+                <textarea
+                  id="cdpInitiativesCommitments"
+                  name="cdpInitiativesCommitments"
+                  rows={3}
+                  value={formData.cdpInitiativesCommitments}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <h3>J. Verification</h3>
+            <div className="form-grid">
+              <div className="form-group">
+                <label htmlFor="cdpVerificationStatus">
+                  Are Scope 1 and 2 emissions externally verified?
+                </label>
+                <select
+                  id="cdpVerificationStatus"
+                  name="cdpVerificationStatus"
+                  value={formData.cdpVerificationStatus}
+                  onChange={handleChange}
+                >
+                  <option value="">Select</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
+              <div className="form-group full">
+                <label htmlFor="cdpVerificationDetails">
+                  If yes, standard, assurance level and verifier name
+                </label>
+                <textarea
+                  id="cdpVerificationDetails"
+                  name="cdpVerificationDetails"
+                  rows={3}
+                  value={formData.cdpVerificationDetails}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+          </>
+          )}
         </section>
         )}
 
