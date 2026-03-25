@@ -736,6 +736,12 @@ const FinalReportPage = () => {
           type="button"
           className="btn btn-primary btn-lg final-big-green-button"
           onClick={handleDownloadPDF}
+          style={{position: 'fixed',
+            bottom: '100px',
+            right: '50px',
+            width: '157px',
+            fontSize: '12px',
+            height: '70px'}}
         >
           Generate Official SEBI-Compliant BRSR
         </button>

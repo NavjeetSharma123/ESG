@@ -127,9 +127,6 @@ const ESGReportForm = () => {
       esgFrameworks: frameworks,
     };
   });
-  const [step, setStep] = useState(0);
-  const steps = ['Company', 'Environmental', 'Social', 'Governance'];
-
   const hasFramework = (fw) => Array.isArray(formData.esgFrameworks) && formData.esgFrameworks.includes(fw);
   const noFrameworkSelected = !Array.isArray(formData.esgFrameworks) || formData.esgFrameworks.length === 0;
 
@@ -171,20 +168,10 @@ const ESGReportForm = () => {
         <p>
           Complete the form below with your organization&apos;s data. Fields align with GRI, SASB, and TCFD frameworks.
         </p>
-        <p>
-          Step
-          {' '}
-          {step + 1}
-          /
-          {steps.length}
-          :
-          {' '}
-          {steps[step]}
-        </p>
+        
       </div>
 
       <form onSubmit={handleSubmit} className="esg-form">
-        {step === 0 && (
         <section className="form-section">
           <h2>Company Information</h2>
           <div className="form-grid">
@@ -314,9 +301,7 @@ const ESGReportForm = () => {
             </div>
           </div>
         </section>
-        )}
 
-        {step === 1 && (
         <section className="form-section">
           <h2>Environmental Metrics</h2>
           <p className="field-helper">
@@ -894,9 +879,7 @@ const ESGReportForm = () => {
             )}
           </div>
         </section>
-        )}
 
-        {step === 2 && (
         <section className="form-section">
           <h2>Social Metrics</h2>
           <p className="field-helper">
@@ -982,9 +965,7 @@ const ESGReportForm = () => {
             )}
           </div>
         </section>
-        )}
 
-        {step === 3 && (
         <section className="form-section">
           <h2>Governance Metrics</h2>
           <p className="field-helper">
@@ -1073,7 +1054,6 @@ const ESGReportForm = () => {
             )}
           </div>
         </section>
-        )}
 
         {false && (
         <section className="form-section">
@@ -1510,28 +1490,13 @@ const ESGReportForm = () => {
         )}
 
         <div className="form-actions">
-          {step > 0 && (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => setStep((prev) => Math.max(prev - 1, 0))}
-          >
-            Previous
+          <button type="submit" className="btn btn-primary btn-lg" style={{position: 'fixed',
+    bottom: '100px',
+    right: '50px',
+    borderRadius: '50%',
+    height: '150px'}}>
+            Submit details
           </button>
-          )}
-          {step < steps.length - 1 ? (
-            <button
-              type="button"
-              className="btn btn-primary btn-lg"
-              onClick={() => setStep((prev) => Math.min(prev + 1, steps.length - 1))}
-            >
-              Next
-            </button>
-          ) : (
-            <button type="submit" className="btn btn-primary btn-lg">
-              Submit details
-            </button>
-          )}
         </div>
       </form>
     </div>
