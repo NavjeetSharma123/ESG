@@ -50,7 +50,7 @@ const services = [
     title: 'Sustainability Scoring',
     description: 'Environmental, social & growth opportunity scores to make your business more sustainable.',
     icon: '⭐',
-    path: '/esg-report',
+    path: '/msci-readiness',
   },
   {
     id: 'reduce',
