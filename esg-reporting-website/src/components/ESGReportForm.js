@@ -129,6 +129,7 @@ const ESGReportForm = () => {
   });
   const hasFramework = (fw) => Array.isArray(formData.esgFrameworks) && formData.esgFrameworks.includes(fw);
   const noFrameworkSelected = !Array.isArray(formData.esgFrameworks) || formData.esgFrameworks.length === 0;
+  const sectorSelected = formData.industry;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -514,10 +515,117 @@ const ESGReportForm = () => {
               </div>
             </>
             )}
-
+            {sectorSelected === 'Technology' && (
+              <div className="form-group full">
+                <label htmlFor="energyConsumption">Technology Questions</label>
+                <input
+                  type="text"
+                  id="energyConsumption"
+                  name="energyConsumption"
+                  value={formData.energyConsumption}
+                  onChange={handleChange}
+                />
+              </div>
+            )}
+            {sectorSelected === 'Manufacturing' && (
+              <div className="form-group full">
+                <label htmlFor="energyConsumption">Manufacturing Questions</label>
+                <input
+                  type="text"
+                  id="energyConsumption"
+                  name="energyConsumption"
+                  value={formData.energyConsumption}
+                  onChange={handleChange}
+                />
+              </div>
+            )}
+            {sectorSelected === 'Finance' && (
+              <div className="form-group full">
+                <label htmlFor="energyConsumption">Finance Questions</label>
+                <input
+                  type="text"
+                  id="energyConsumption"
+                  name="energyConsumption"
+                  value={formData.energyConsumption}
+                  onChange={handleChange}
+                />
+              </div>
+            )}
+            {sectorSelected === 'Retail' && (
+              <div className="form-group full">
+                <label htmlFor="energyConsumption">Retail Questions</label>
+                <input
+                  type="text"
+                  id="energyConsumption"
+                  name="energyConsumption"
+                  value={formData.energyConsumption}
+                  onChange={handleChange}
+                />
+              </div>
+            )}
+            {sectorSelected === 'Energy' && (
+              <div className="form-group full">
+                <label htmlFor="energyConsumption">Energy Questions</label>
+                <input
+                  type="text"
+                  id="energyConsumption"
+                  name="energyConsumption"
+                  value={formData.energyConsumption}
+                  onChange={handleChange}
+                />
+              </div>
+            )}
+            {sectorSelected === 'Healthcare' && (
+              <div className="form-group full">
+                <label htmlFor="energyConsumption">Healthcare Questions</label>
+                <input
+                  type="text"
+                  id="energyConsumption"
+                  name="energyConsumption"
+                  value={formData.energyConsumption}
+                  onChange={handleChange}
+                />
+              </div>
+            )}
+            {sectorSelected === 'Transportation' && (
+              <div className="form-group full">
+                <label htmlFor="energyConsumption">Transportation Questions</label>
+                <input
+                  type="text"
+                  id="energyConsumption"
+                  name="energyConsumption"
+                  value={formData.energyConsumption}
+                  onChange={handleChange}
+                />
+              </div>
+            )}
+            {sectorSelected === 'Construction' && (
+              <div className="form-group full">
+                <label htmlFor="energyConsumption">Construction Questions</label>
+                <input
+                  type="text"
+                  id="energyConsumption"
+                  name="energyConsumption"
+                  value={formData.energyConsumption}
+                  onChange={handleChange}
+                />
+              </div>
+            )}
+            {sectorSelected === 'Agriculture' && (
+              <div className="form-group full">
+                <label htmlFor="energyConsumption">Agriculture Questions</label>
+                <input
+                  type="text"
+                  id="energyConsumption"
+                  name="energyConsumption"
+                  value={formData.energyConsumption}
+                  onChange={handleChange}
+                />
+              </div>
+            )}
             {hasFramework('CDP') && (
             <div className="form-group full">
-              <h3>CDP Climate Questionnaire</h3>
+              <h3>CDP Climate Questionnaire {sectorSelected} </h3>
               <p className="field-helper">
                 Complete the CDP climate module below (Sections A–J).
               </p>
