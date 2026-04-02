@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import './ESGReportForm.css';
 
@@ -36,6 +36,32 @@ const ESGReportForm = () => {
   const history = useHistory();
   const location = useLocation();
   const presetCompany = (location && location.state && location.state.presetCompany) || null;
+
+  const [openTipId, setOpenTipId] = useState(null);
+  useEffect(() => {
+    const onDocMouseDown = (e) => {
+      if (!(e.target instanceof Element)) return;
+      if (e.target.closest && e.target.closest('[data-tip-root="true"]')) return;
+      setOpenTipId(null);
+    };
+    document.addEventListener('mousedown', onDocMouseDown);
+    return () => document.removeEventListener('mousedown', onDocMouseDown);
+  }, []);
+
+  const InfoTip = ({ id, text }) => (
+    <span className="info-tip" data-tip-root="true">
+      <button
+        type="button"
+        className="info-tip-btn"
+        aria-label="Show input hint"
+        aria-expanded={openTipId === id}
+        onClick={() => setOpenTipId((prev) => (prev === id ? null : id))}
+      >
+        i
+      </button>
+      {openTipId === id ? <span className="info-tip-pop">{text}</span> : null}
+    </span>
+  );
 
   const [formData, setFormData] = useState(() => {
     const base = {
@@ -131,6 +157,56 @@ const ESGReportForm = () => {
   const noFrameworkSelected = !Array.isArray(formData.esgFrameworks) || formData.esgFrameworks.length === 0;
   const sectorSelected = formData.industry;
 
+  const sectionRefs = useRef({
+    company: null,
+    environmental: null,
+    cdp: null,
+    social: null,
+    governance: null,
+  });
+  const sections = useMemo(
+    () => [
+      { id: 'company', label: 'Company' },
+      { id: 'environmental', label: 'Environmental' },
+      { id: 'cdp', label: 'CDP' },
+      { id: 'social', label: 'Social' },
+      { id: 'governance', label: 'Governance' },
+    ],
+    []
+  );
+  const visibleSections = useMemo(() => {
+    return sections.filter((s) => (s.id === 'cdp' ? hasFramework('CDP') : true));
+  }, [hasFramework, sections]);
+  const [activeSectionId, setActiveSectionId] = useState('company');
+  const progressPct = useMemo(() => {
+    const idx = Math.max(0, visibleSections.findIndex((s) => s.id === activeSectionId));
+    const denom = Math.max(1, visibleSections.length - 1);
+    return Math.round((idx / denom) * 100);
+  }, [activeSectionId, visibleSections]);
+
+  useEffect(() => {
+    const els = visibleSections
+      .map((s) => sectionRefs.current[s.id])
+      .filter(Boolean);
+    if (els.length === 0) return;
+
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => (b.intersectionRatio || 0) - (a.intersectionRatio || 0));
+        if (visible[0] && visible[0].target && visible[0].target.id) {
+          const id = visible[0].target.id.replace('esg-section-', '');
+          setActiveSectionId(id);
+        }
+      },
+      { root: null, threshold: [0.15, 0.25, 0.35, 0.5] }
+    );
+
+    els.forEach((el) => obs.observe(el));
+    return () => obs.disconnect();
+  }, [visibleSections]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => {
@@ -169,11 +245,39 @@ const ESGReportForm = () => {
         <p>
           Complete the form below with your organization&apos;s data. Fields align with GRI, SASB, and TCFD frameworks.
         </p>
-        
+        <div className="esg-progress" aria-label="Form progress">
+          <div className="esg-progress-top">
+            <div className="esg-progress-steps">
+              {visibleSections.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  className={`esg-progress-step ${activeSectionId === s.id ? 'is-active' : ''}`}
+                  onClick={() => {
+                    const el = sectionRefs.current[s.id];
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+            <div className="esg-progress-pct">{progressPct}%</div>
+          </div>
+          <div className="esg-progress-track" aria-hidden="true">
+            <div className="esg-progress-fill" style={{ width: `${progressPct}%` }} />
+          </div>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="esg-form">
-        <section className="form-section">
+        <section
+          id="esg-section-company"
+          ref={(el) => {
+            sectionRefs.current.company = el;
+          }}
+          className="form-section"
+        >
           <h2>Company Information</h2>
           <div className="form-grid">
             <div className="form-group full">
@@ -303,7 +407,13 @@ const ESGReportForm = () => {
           </div>
         </section>
 
-        <section className="form-section">
+        <section
+          id="esg-section-environmental"
+          ref={(el) => {
+            sectionRefs.current.environmental = el;
+          }}
+          className="form-section"
+        >
           <h2>Environmental Metrics</h2>
           <p className="field-helper">
             Fields shown below are tailored to your selected frameworks.
@@ -328,9 +438,15 @@ const ESGReportForm = () => {
                 />
               </div>
               <div className="form-group full">
-                <label htmlFor="scope1FuelStationaryDetails">
-                  Fuel Consumption – Stationary Sources
-                </label>
+                <div className="label-row">
+                  <label htmlFor="scope1FuelStationaryDetails">
+                    Fuel Consumption – Stationary Sources
+                  </label>
+                  <InfoTip
+                    id="tip-scope1FuelStationaryDetails"
+                    text="Include: fuel type (diesel, petrol, natural gas, LPG, coal, biomass), quantity consumed, unit of measurement (liters, kg, m³), facility/location, and time period (monthly or annual)."
+                  />
+                </div>
                 <textarea
                   id="scope1FuelStationaryDetails"
                   name="scope1FuelStationaryDetails"
@@ -339,13 +455,15 @@ const ESGReportForm = () => {
                   onChange={handleChange}
                   placeholder="Enter fuel used in boilers, generators, furnaces, etc.&#10;e.g. Plant A – Diesel – 3,500 – Liters – 2026 annual"
                 />
-                <small>
-                  Include: fuel type (diesel, petrol, natural gas, LPG, coal, biomass), quantity consumed, unit of
-                  measurement (liters, kg, m³), facility/location, and time period (monthly or annual).
-                </small>
               </div>
               <div className="form-group full">
-                <label htmlFor="scope1CompanyVehicleDetails">Company Vehicle Fuel Usage</label>
+                <div className="label-row">
+                  <label htmlFor="scope1CompanyVehicleDetails">Company Vehicle Fuel Usage</label>
+                  <InfoTip
+                    id="tip-scope1CompanyVehicleDetails"
+                    text="Include: vehicle type, fuel type, fuel consumption or distance travelled, and any fuel purchase records."
+                  />
+                </div>
                 <textarea
                   id="scope1CompanyVehicleDetails"
                   name="scope1CompanyVehicleDetails"
@@ -354,14 +472,17 @@ const ESGReportForm = () => {
                   onChange={handleChange}
                   placeholder="Enter fuel used in company-owned vehicles.&#10;e.g. Delivery Truck – Diesel – 1,200 L – FY 2026"
                 />
-                <small>
-                  Include: vehicle type, fuel type, fuel consumption or distance travelled, and any fuel purchase records.
-                </small>
               </div>
               <div className="form-group full">
-                <label htmlFor="scope1RefrigerantDetails">
-                  Refrigerants / Air Conditioning Leakage
-                </label>
+                <div className="label-row">
+                  <label htmlFor="scope1RefrigerantDetails">
+                    Refrigerants / Air Conditioning Leakage
+                  </label>
+                  <InfoTip
+                    id="tip-scope1RefrigerantDetails"
+                    text="Include: refrigerant type (e.g. R134a, R410a), amount used or replaced, and relevant maintenance records."
+                  />
+                </div>
                 <textarea
                   id="scope1RefrigerantDetails"
                   name="scope1RefrigerantDetails"
@@ -370,14 +491,17 @@ const ESGReportForm = () => {
                   onChange={handleChange}
                   placeholder="Enter refrigerant use and leakage.&#10;e.g. HQ Chiller – R410a – 12 kg replaced – 2026 maintenance"
                 />
-                <small>
-                  Include: refrigerant type (e.g. R134a, R410a), amount used or replaced, and relevant maintenance records.
-                </small>
               </div>
               <div className="form-group full">
-                <label htmlFor="scope1ProcessEmissionsDetails">
-                  Industrial Process Emissions (if applicable)
-                </label>
+                <div className="label-row">
+                  <label htmlFor="scope1ProcessEmissionsDetails">
+                    Industrial Process Emissions (if applicable)
+                  </label>
+                  <InfoTip
+                    id="tip-scope1ProcessEmissionsDetails"
+                    text="Include: production volumes, raw materials used, and process emissions data for relevant industries (e.g. cement, steel, chemicals)."
+                  />
+                </div>
                 <textarea
                   id="scope1ProcessEmissionsDetails"
                   name="scope1ProcessEmissionsDetails"
@@ -386,10 +510,6 @@ const ESGReportForm = () => {
                   onChange={handleChange}
                   placeholder="Enter process-related emissions.&#10;e.g. Cement line – clinker production volume, kiln fuel mix, calcination data"
                 />
-                <small>
-                  Include: production volumes, raw materials used, and process emissions data for relevant industries
-                  (e.g. cement, steel, chemicals).
-                </small>
               </div>
               <div className="form-group">
                 <h3><b><label htmlFor="scope2Emissions">Scope 2 Emissions (tCO₂e) *</label></b></h3>
@@ -404,7 +524,13 @@ const ESGReportForm = () => {
                 />
               </div>
               <div className="form-group full">
-                <label htmlFor="scope2ElectricityDetails">Electricity Consumption</label>
+                <div className="label-row">
+                  <label htmlFor="scope2ElectricityDetails">Electricity Consumption</label>
+                  <InfoTip
+                    id="tip-scope2ElectricityDetails"
+                    text="Include: electricity consumed, unit (kWh or MWh), facility location, utility provider, and time period. Use data from electricity bills or energy management systems."
+                  />
+                </div>
                 <textarea
                   id="scope2ElectricityDetails"
                   name="scope2ElectricityDetails"
@@ -413,15 +539,17 @@ const ESGReportForm = () => {
                   onChange={handleChange}
                   placeholder="Enter electricity consumed per facility.&#10;e.g. Office HQ – 42,000 – kWh – Utility ABC – FY 2026"
                 />
-                <small>
-                  Include: electricity consumed, unit (kWh or MWh), facility location, utility provider, and time period.
-                  Use data from electricity bills or energy management systems.
-                </small>
               </div>
               <div className="form-group full">
-                <label htmlFor="scope2ThermalEnergyDetails">
-                  Purchased Heating / Cooling / Steam
-                </label>
+                <div className="label-row">
+                  <label htmlFor="scope2ThermalEnergyDetails">
+                    Purchased Heating / Cooling / Steam
+                  </label>
+                  <InfoTip
+                    id="tip-scope2ThermalEnergyDetails"
+                    text="Include: type of energy (steam, heating, cooling), amount consumed, energy supplier, and reporting period."
+                  />
+                </div>
                 <textarea
                   id="scope2ThermalEnergyDetails"
                   name="scope2ThermalEnergyDetails"
@@ -430,9 +558,6 @@ const ESGReportForm = () => {
                   onChange={handleChange}
                   placeholder="Enter purchased thermal energy.&#10;e.g. Purchased steam – 12,000 kWh – Supplier XYZ – FY 2026"
                 />
-                <small>
-                  Include: type of energy (steam, heating, cooling), amount consumed, energy supplier, and reporting period.
-                </small>
               </div>
             </>
             )}
@@ -625,6 +750,12 @@ const ESGReportForm = () => {
             )}
             {hasFramework('CDP') && (
             <div className="form-group full">
+              <div
+                id="esg-section-cdp"
+                ref={(el) => {
+                  sectionRefs.current.cdp = el;
+                }}
+              />
               <h3>CDP Climate Questionnaire {sectorSelected} </h3>
               <p className="field-helper">
                 Complete the CDP climate module below (Sections A–J).
@@ -647,12 +778,11 @@ const ESGReportForm = () => {
                 <div className="form-group">
                   <label htmlFor="cdpBoardLastReviewDate">Date of last review</label>
                   <input
-                    type="text"
+                    type="date"
                     id="cdpBoardLastReviewDate"
                     name="cdpBoardLastReviewDate"
                     value={formData.cdpBoardLastReviewDate}
                     onChange={handleChange}
-                    placeholder="e.g. 2026-03-31"
                   />
                 </div>
                 <div className="form-group full">
@@ -988,7 +1118,13 @@ const ESGReportForm = () => {
           </div>
         </section>
 
-        <section className="form-section">
+        <section
+          id="esg-section-social"
+          ref={(el) => {
+            sectionRefs.current.social = el;
+          }}
+          className="form-section"
+        >
           <h2>Social Metrics</h2>
           <p className="field-helper">
             Social disclosures are especially relevant for GRI, UN Global Compact and BRSR.
@@ -1074,7 +1210,13 @@ const ESGReportForm = () => {
           </div>
         </section>
 
-        <section className="form-section">
+        <section
+          id="esg-section-governance"
+          ref={(el) => {
+            sectionRefs.current.governance = el;
+          }}
+          className="form-section"
+        >
           <h2>Governance Metrics</h2>
           <p className="field-helper">
             Governance questions are most relevant for TCFD, ISSB / SASB, GRI and CSRD / ESRS.

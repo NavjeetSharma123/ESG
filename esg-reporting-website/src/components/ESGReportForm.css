@@ -19,6 +19,111 @@
   margin: 0;
 }
 
+.esg-progress {
+  margin-top: 1rem;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid #e8f0ec;
+  border-radius: 12px;
+  padding: 0.75rem 0.875rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.esg-progress-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.esg-progress-steps {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.esg-progress-step {
+  background: transparent;
+  border: 1px solid #d7e4de;
+  color: #26473b;
+  border-radius: 999px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.esg-progress-step.is-active {
+  border-color: #165a42;
+  background: rgba(22, 90, 66, 0.06);
+  font-weight: 600;
+}
+
+.esg-progress-pct {
+  font-size: 0.8rem;
+  color: #5a6c63;
+  font-variant-numeric: tabular-nums;
+}
+
+.esg-progress-track {
+  height: 6px;
+  background: rgba(22, 90, 66, 0.08);
+  border-radius: 999px;
+  margin-top: 0.55rem;
+  overflow: hidden;
+}
+
+.esg-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #165a42, #7dd3a8);
+  border-radius: 999px;
+}
+
+.label-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.info-tip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.info-tip-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid #c5d4ce;
+  background: #fff;
+  color: #165a42;
+  font-weight: 700;
+  font-size: 0.78rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.info-tip-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(22, 90, 62, 0.12);
+}
+
+.info-tip-pop {
+  position: absolute;
+  right: 0;
+  top: 28px;
+  z-index: 10;
+  width: min(360px, 70vw);
+  background: #0f2f24;
+  color: #e9f7f1;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  padding: 0.75rem 0.85rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
 .esg-form .form-section {
   background: #fff;
   border-radius: 12px;
