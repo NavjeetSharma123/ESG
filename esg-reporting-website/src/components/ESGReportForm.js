@@ -178,11 +178,123 @@ const ESGReportForm = () => {
     return sections.filter((s) => (s.id === 'cdp' ? hasFramework('CDP') : true));
   }, [hasFramework, sections]);
   const [activeSectionId, setActiveSectionId] = useState('company');
+  const progressFieldKeys = useMemo(() => {
+    const keys = [
+      'companyName',
+      'industry',
+      'reportingPeriod',
+      'hqLocation',
+      'employeeCount',
+      'esgFrameworks',
+    ];
+
+    if (
+      noFrameworkSelected
+      || hasFramework('TCFD')
+      || hasFramework('ISSB / SASB')
+      || hasFramework('CSRD / ESRS')
+      || hasFramework('US SEC Climate Disclosure')
+    ) {
+      keys.push(
+        'scope1FuelStationaryDetails',
+        'scope1CompanyVehicleDetails',
+        'scope1RefrigerantDetails',
+        'scope1ProcessEmissionsDetails',
+        'scope2ElectricityDetails',
+        'scope2ThermalEnergyDetails'
+      );
+    }
+
+    if (noFrameworkSelected || hasFramework('GRI') || hasFramework('UN Global Compact') || hasFramework('CDP')) {
+      keys.push(
+        'scope3Emissions',
+        'energyConsumption',
+        'renewableEnergyPercent',
+        'waterUsage',
+        'wasteGenerated',
+        'wasteRecycledPercent',
+        'environmentalInitiatives'
+      );
+    }
+
+    if (noFrameworkSelected || hasFramework('GRI') || hasFramework('UN Global Compact') || hasFramework('BRSR')) {
+      keys.push(
+        'totalEmployees',
+        'genderDiversityPercent',
+        'trainingHoursPerEmployee',
+        'safetyIncidents',
+        'communityInvestment',
+        'employeeTurnoverPercent',
+        'socialInitiatives'
+      );
+    }
+
+    if (
+      noFrameworkSelected
+      || hasFramework('TCFD')
+      || hasFramework('ISSB / SASB')
+      || hasFramework('GRI')
+      || hasFramework('CSRD / ESRS')
+    ) {
+      keys.push(
+        'boardSize',
+        'independentDirectorsPercent',
+        'sustainabilityCommittee',
+        'esgTargetsSet',
+        'ethicsPolicy',
+        'governanceInitiatives'
+      );
+    }
+
+    if (hasFramework('CDP')) {
+      keys.push(
+        'cdpBoardReview',
+        'cdpBoardLastReviewDate',
+        'cdpBoardTopics',
+        'cdpClimateResponsibleTitles',
+        'cdpExecCompLinked',
+        'cdpExecCompDetails',
+        'cdpRisksSummary',
+        'cdpOpportunitiesSummary',
+        'cdpStrategyIntegrated',
+        'cdpStrategyExamples',
+        'cdpTransitionPlan',
+        'cdpTransitionPlanDetails',
+        'cdpTcfdAlignment',
+        'cdpTargetsHave',
+        'cdpTargetsDetails',
+        'cdpEmissionsCurrentYear',
+        'cdpEmissionsMethodology',
+        'cdpEmissionsHistory',
+        'cdpEnergyTotal',
+        'cdpEnergyRenewable',
+        'cdpEnergyIntensity',
+        'cdpEmissionsBreakdown',
+        'cdpTopEmissionSources',
+        'cdpCarbonPricing',
+        'cdpCarbonPricingDetails',
+        'cdpSupplierEngagementPercent',
+        'cdpSupplierRequirements',
+        'cdpInitiativesCommitments',
+        'cdpVerificationStatus',
+        'cdpVerificationDetails'
+      );
+    }
+
+    return [...new Set(keys)];
+  }, [formData.esgFrameworks, hasFramework, noFrameworkSelected]);
+
   const progressPct = useMemo(() => {
-    const idx = Math.max(0, visibleSections.findIndex((s) => s.id === activeSectionId));
-    const denom = Math.max(1, visibleSections.length - 1);
-    return Math.round((idx / denom) * 100);
-  }, [activeSectionId, visibleSections]);
+    const total = Math.max(1, progressFieldKeys.length);
+    const completed = progressFieldKeys.reduce((count, key) => {
+      const value = formData[key];
+      if (Array.isArray(value)) return count + (value.length > 0 ? 1 : 0);
+      if (typeof value === 'string') return count + (value.trim() ? 1 : 0);
+      if (value === undefined || value === null) return count;
+      return count + 1;
+    }, 0);
+    return Math.round((completed / total) * 100);
+  }, [formData, progressFieldKeys]);
 
   useEffect(() => {
     const els = visibleSections
