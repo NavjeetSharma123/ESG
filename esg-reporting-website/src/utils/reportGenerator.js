@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
 const n = (val) => {
   if (Array.isArray(val) && val.length) return val.join(', ');
@@ -128,142 +129,322 @@ export const generateESGReportPDF = (data) => {
 };
 
 export const generateBRSRReportPDF = (data) => {
+  // Kept for backward compatibility (older flow). Use generateBRSRReportPDFFromTemplate for exact Annexure look.
   const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 20;
-  let y = 20;
-  const lineHeight = 6;
-
-  const addText = (text, fontSize = 10, isBold = false) => {
-    doc.setFontSize(fontSize);
-    doc.setFont('helvetica', isBold ? 'bold' : 'normal');
-    const lines = doc.splitTextToSize(text, pageWidth - 2 * margin);
-    lines.forEach((line) => {
-      doc.text(line, margin, y);
-      y += lineHeight;
-    });
-  };
-
-  const addSection = (title, content) => {
-    if (y > 260) {
-      doc.addPage();
-      y = 20;
-    }
-    doc.setFillColor(32, 64, 122);
-    doc.rect(0, y - 5, pageWidth, 8, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.text(title, margin, y + 2);
-    doc.setTextColor(0, 0, 0);
-    y += 12;
-    addText(content, 10, false);
-    y += 4;
-  };
-
-  // Title band – SEBI BRSR style header
-  doc.setFillColor(16, 45, 84);
-  doc.rect(0, 0, pageWidth, 32, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Business Responsibility & Sustainability Report (BRSR)', margin, 18);
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
-  doc.text(
-    `${n(data.companyName)} | Financial Reporting Year: ${n(data.reportingYear || '')}`,
-    margin,
-    25
-  );
-  doc.setTextColor(0, 0, 0);
-  y = 42;
-
-  addSection(
-    'Section A – General Disclosures',
-    `A1. Corporate identity details\n` +
-      `  • Company name: ${n(data.companyName)}\n` +
-      `  • Corporate Identification Number (CIN): ${n(data.cin)}\n` +
-      `  • Registered office address: ${n(data.registeredAddress)}\n` +
-      `  • Stock exchange listing details: ${n(data.stockExchanges)}\n\n` +
-      `A2. Products/services and operations\n` +
-      `  • Locations of plants/offices: ${n(data.plantLocations)}\n` +
-      `  • Business activities covering ~90% of turnover: ${n(data.keyActivities90Turnover)}\n\n` +
-      `A3. Employees and workers\n` +
-      `  • Total employees: ${n(data.totalEmployees)} (women: ${n(
-        data.femaleEmployees
-      )}, persons with disabilities: ${n(data.differentlyAbledEmployees)})\n` +
-      `  • Total workers (incl. contractual): ${n(data.totalWorkers)}\n\n` +
-      `A4. CSR details\n` +
-      `  • CSR applicability & brief: ${n(data.csrApplicable)}`
-  );
-
-  addSection(
-    'Section B – Management & Process Disclosures',
-    `B1. Policies and governance\n` +
-      `  • NGRBC Principles 1–9 policy status: ${n(data.ngrbcPoliciesStatus)}\n` +
-      `  • Highest authority / owner for each policy: ${n(data.policyOwners)}\n\n` +
-      `B2. Strategy and targets\n` +
-      `  • Key ESG goals and annual targets: ${n(data.esgGoalsTargets)}`
-  );
-
-  addSection(
-    'Section C – Principle-wise Performance (Essential & Leadership Indicators)',
-    `C1. Ethics, integrity and transparency (P1)\n` +
-      `  • Corruption / bribery cases & complaints: ${n(data.corruptionCases)}\n` +
-      `  • Fines / penalties paid: ${n(data.corruptionFines)}\n\n` +
-      `C2. Product lifecycle sustainability & resource efficiency (P2, P6)\n` +
-      `  • Sustainable sourcing initiatives: ${n(data.sustainableSourcing)}\n` +
-      `  • R&D for environmental technologies: ${n(data.envRD)}\n` +
-      `  • Plastic waste generated & treated: ${n(data.plasticWaste)}\n` +
-      `  • E-waste generated & treated: ${n(data.eWaste)}\n` +
-      `  • Hazardous waste generated & treated: ${n(data.hazardousWaste)}\n\n` +
-      `C3. Employee well-being, training and safety (P3, P5)\n` +
-      `  • Minimum wage compliance: ${n(data.minWageCompliance)}\n` +
-      `  • Average training hours per employee: ${n(data.avgTrainingHours)}\n` +
-      `  • Safety incidents: ${n(data.safetyIncidents)}\n` +
-      `  • Worker grievances raised: ${n(data.workerGrievances)}\n` +
-      `  • Average grievance resolution time: ${n(data.grievanceResolutionTime)}\n\n` +
-      `C4. Stakeholder engagement (P4, P8)\n` +
-      `  • Engagement with marginalized / vulnerable stakeholders: ${n(
-        data.stakeholderEngagement
-      )}`
-  );
-
-  addSection(
-    'Section D – Materiality & ESG Risks',
-    `D1. Material ESG risks\n` +
-      `  • Key environmental & social risks: ${n(data.keyRisks)}\n\n` +
-      `D2. Financial implications\n` +
-      `  • Link to financial impact (revenue, costs, assets, reputation): ${n(
-        data.riskFinancialImpact
-      )}\n\n` +
-      `D3. Risk management and mitigation\n` +
-      `  • Mitigation plans & timelines: ${n(data.riskMitigationPlans)}`
-  );
-
-  if (y > 250) {
-    doc.addPage();
-    y = 20;
-  }
-  y += 12;
-
-  // Digital signature block
-  doc.setFontSize(10);
-  doc.setTextColor(0, 0, 0);
-  doc.text('Authorised signatory (Director / Company Secretary)', margin, y);
-  y += 18;
-  doc.line(margin, y, pageWidth / 2, y);
-  y += 6;
-  doc.setFontSize(9);
-  doc.setTextColor(100, 100, 100);
-  doc.text(
-    `BRSR report generated on ${new Date().toLocaleDateString()} | ESG Sustainability Platform`,
-    pageWidth / 2,
-    y,
-    { align: 'center' }
-  );
-
+  doc.text('BRSR template-based PDF not generated.', 20, 20);
   return doc.output('blob');
+};
+
+const brsrTemplateHTML = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BRSR Report — {{companyName}}</title>
+    <style>
+      :root{
+        --ink:#0b1f33;
+        --muted:#556676;
+        --brand:#10345e;
+        --line:#d7e0ea;
+        --panel:#f6f9fc;
+      }
+      *{box-sizing:border-box}
+      body{
+        margin:0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+        color:var(--ink);
+        background:#fff;
+      }
+      .page{
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 40px 28px 56px;
+      }
+      .cover{
+        border:1px solid var(--line);
+        border-radius:16px;
+        padding:24px;
+        background: linear-gradient(180deg, rgba(16,52,94,0.06), transparent 55%);
+      }
+      .title{
+        margin:0;
+        font-size: 26px;
+        letter-spacing: .2px;
+        color: var(--brand);
+      }
+      .subtitle{
+        margin:10px 0 0;
+        color: var(--muted);
+        line-height:1.4;
+      }
+      .meta{
+        margin-top:14px;
+        display:grid;
+        grid-template-columns: 1fr 1fr;
+        gap:10px 16px;
+        padding-top:14px;
+        border-top:1px solid var(--line);
+      }
+      .meta .k{color:var(--muted); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.6px}
+      .meta .v{margin-top:4px; font-weight:700}
+      @media (max-width:700px){ .meta{grid-template-columns:1fr} }
+
+      h2{
+        margin:28px 0 10px;
+        font-size: 16px;
+        color: var(--brand);
+        padding-bottom:8px;
+        border-bottom: 2px solid rgba(16,52,94,0.18);
+      }
+      .section-note{
+        margin:0 0 14px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+      table{
+        width:100%;
+        border-collapse: collapse;
+        border:1px solid var(--line);
+        border-radius: 12px;
+        overflow:hidden;
+        background:#fff;
+      }
+      th, td{
+        border-bottom:1px solid var(--line);
+        padding: 10px 12px;
+        vertical-align: top;
+        font-size: 13px;
+        line-height: 1.35;
+      }
+      th{
+        background: var(--panel);
+        text-align:left;
+        color: #24435f;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+      }
+      tr:last-child td{ border-bottom:0; }
+      .field{
+        color: var(--muted);
+        width: 36%;
+        font-weight: 700;
+      }
+      .value{
+        width: 64%;
+      }
+      .footer{
+        margin-top: 22px;
+        color: var(--muted);
+        font-size: 12px;
+        border-top: 1px solid var(--line);
+        padding-top: 12px;
+        display:flex;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      @media print{
+        .page{max-width:none; padding: 18mm 16mm;}
+        a{color:inherit; text-decoration:none}
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="cover">
+        <h1 class="title">Business Responsibility and Sustainability Report (BRSR)</h1>
+        <p class="subtitle">
+          Annexure I — Business responsibility and sustainability reporting by listed entities.
+          Generated from user-provided disclosures. Missing values are shown as <strong>Not Disclosed</strong> / <strong>N/A</strong>.
+        </p>
+        <div class="meta">
+          <div>
+            <div class="k">Company</div>
+            <div class="v">{{companyName}}</div>
+          </div>
+          <div>
+            <div class="k">CIN</div>
+            <div class="v">{{cin}}</div>
+          </div>
+          <div>
+            <div class="k">Registered address</div>
+            <div class="v">{{registeredAddress}}</div>
+          </div>
+          <div>
+            <div class="k">Stock exchange listings</div>
+            <div class="v">{{stockExchanges}}</div>
+          </div>
+        </div>
+      </div>
+
+      <h2>Section A — General Disclosures</h2>
+      <p class="section-note">Foundational identity, operations, workforce and financial overview.</p>
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Disclosure</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="field">Company name</td><td class="value">{{companyName}}</td></tr>
+          <tr><td class="field">Corporate Identification Number (CIN)</td><td class="value">{{cin}}</td></tr>
+          <tr><td class="field">Registered office address</td><td class="value">{{registeredAddress}}</td></tr>
+          <tr><td class="field">Stock exchange listings</td><td class="value">{{stockExchanges}}</td></tr>
+          <tr><td class="field">Locations of plants/offices</td><td class="value">{{plantLocations}}</td></tr>
+          <tr><td class="field">Business activities covering ~90% of turnover</td><td class="value">{{keyActivities90Turnover}}</td></tr>
+          <tr><td class="field">Total employees</td><td class="value">{{totalEmployees}}</td></tr>
+          <tr><td class="field">Total workers (incl. contractual)</td><td class="value">{{totalWorkers}}</td></tr>
+          <tr><td class="field">Women employees</td><td class="value">{{femaleEmployees}}</td></tr>
+          <tr><td class="field">Differently abled employees</td><td class="value">{{differentlyAbledEmployees}}</td></tr>
+          <tr><td class="field">Net worth</td><td class="value">{{netWorth}}</td></tr>
+          <tr><td class="field">Turnover</td><td class="value">{{turnover}}</td></tr>
+          <tr><td class="field">CSR applicability & brief</td><td class="value">{{csrApplicable}}</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Section B — Management & Process Disclosures</h2>
+      <p class="section-note">Policy, governance ownership, and ESG strategy/targets.</p>
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Disclosure</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="field">NGRBC policy status (Principles 1–9)</td><td class="value">{{ngrbcPoliciesStatus}}</td></tr>
+          <tr><td class="field">Highest authority / owner for each policy</td><td class="value">{{policyOwners}}</td></tr>
+          <tr><td class="field">Key ESG goals & annual targets</td><td class="value">{{esgGoalsTargets}}</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Section C — Principle-wise Performance (Essential & Leadership Indicators)</h2>
+      <p class="section-note">Core integrity, resource efficiency, workforce well-being, and stakeholder engagement indicators.</p>
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Disclosure</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="field">Corruption / bribery cases & complaints</td><td class="value">{{corruptionCases}}</td></tr>
+          <tr><td class="field">Fines / penalties paid</td><td class="value">{{corruptionFines}}</td></tr>
+          <tr><td class="field">Sustainable sourcing initiatives</td><td class="value">{{sustainableSourcing}}</td></tr>
+          <tr><td class="field">R&amp;D for environmental technologies</td><td class="value">{{envRD}}</td></tr>
+          <tr><td class="field">Plastic waste generated &amp; treated</td><td class="value">{{plasticWaste}}</td></tr>
+          <tr><td class="field">E-waste generated &amp; treated</td><td class="value">{{eWaste}}</td></tr>
+          <tr><td class="field">Hazardous waste generated &amp; treated</td><td class="value">{{hazardousWaste}}</td></tr>
+          <tr><td class="field">Minimum wage compliance</td><td class="value">{{minWageCompliance}}</td></tr>
+          <tr><td class="field">Average training hours per employee</td><td class="value">{{avgTrainingHours}}</td></tr>
+          <tr><td class="field">Safety incidents</td><td class="value">{{safetyIncidents}}</td></tr>
+          <tr><td class="field">Worker grievances raised</td><td class="value">{{workerGrievances}}</td></tr>
+          <tr><td class="field">Average grievance resolution time</td><td class="value">{{grievanceResolutionTime}}</td></tr>
+          <tr><td class="field">Engagement with marginalized / vulnerable stakeholders</td><td class="value">{{stakeholderEngagement}}</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Section D — Materiality & ESG Risks</h2>
+      <p class="section-note">Material ESG risks, financial implications, and mitigation planning.</p>
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Disclosure</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="field">Key environmental &amp; social risks</td><td class="value">{{keyRisks}}</td></tr>
+          <tr><td class="field">Link to financial impact</td><td class="value">{{riskFinancialImpact}}</td></tr>
+          <tr><td class="field">Risk management and mitigation plans</td><td class="value">{{riskMitigationPlans}}</td></tr>
+        </tbody>
+      </table>
+
+      <div class="footer">
+        <div>Generated on {{generatedOn}}</div>
+        <div>ESG Sustainability Platform</div>
+      </div>
+    </div>
+  </body>
+</html>`;
+
+function resolvePlaceholder(data, key) {
+  const val = data && Object.prototype.hasOwnProperty.call(data, key) ? data[key] : undefined;
+  if (val === undefined || val === null) return 'Not Disclosed';
+  if (typeof val === 'string' && val.trim() === '') return 'Not Disclosed';
+  if (Array.isArray(val) && val.length === 0) return 'Not Disclosed';
+  return String(val);
+}
+
+export const generateBRSRReportHTML = (data) => {
+  const safeData = data && typeof data === 'object' ? data : {};
+  const merged = {
+    ...safeData,
+    generatedOn: new Date().toLocaleDateString(),
+  };
+
+  return brsrTemplateHTML.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key) =>
+    resolvePlaceholder(merged, key)
+  );
+};
+
+const brsrTemplatePdfUrl = '/templates/brsr_annexure1_template.pdf';
+
+const nd = (val) => {
+  if (val === undefined || val === null) return 'Not Disclosed';
+  if (typeof val === 'string' && val.trim() === '') return 'Not Disclosed';
+  return String(val);
+};
+
+function drawWrappedText(page, font, text, x, y, maxWidth, fontSize) {
+  const words = String(text).split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = '';
+  for (const w of words) {
+    const next = line ? `${line} ${w}` : w;
+    const width = font.widthOfTextAtSize(next, fontSize);
+    if (width <= maxWidth || !line) {
+      line = next;
+    } else {
+      lines.push(line);
+      line = w;
+    }
+  }
+  if (line) lines.push(line);
+
+  const lineHeight = fontSize * 1.25;
+  lines.forEach((ln, i) => {
+    page.drawText(ln, { x, y: y - i * lineHeight, size: fontSize, font, color: rgb(0, 0, 0) });
+  });
+}
+
+export const generateBRSRReportPDFFromTemplate = async (data) => {
+  const res = await fetch(brsrTemplatePdfUrl);
+  if (!res.ok) throw new Error('Failed to load BRSR PDF template');
+  const templateBytes = await res.arrayBuffer();
+  const pdfDoc = await PDFDocument.load(templateBytes);
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+  // Coordinates are in PDF points. Template pages are A4: 595.32 x 841.92.
+  // We place values on the right side of the corresponding rows.
+  const page1 = pdfDoc.getPage(0);
+  const writeX = 380;
+  const maxW = 190;
+  const fs = 10;
+
+  // Page 1 – Section A (I. Details of the listed entity)
+  drawWrappedText(page1, font, nd(data.cin), writeX, 648.46, maxW, fs);
+  drawWrappedText(page1, font, nd(data.companyName), writeX, 633.82, maxW, fs);
+  drawWrappedText(page1, font, nd(data.registeredAddress), writeX, 604.54, maxW, fs);
+  drawWrappedText(page1, font, nd(data.website), writeX, 545.95, maxW, fs);
+  // Map to BRSR field name (your form uses turnover/netWorth etc; reporting FY isn't captured—fallback to Not Disclosed)
+  drawWrappedText(page1, font, nd(data.reportingYear), writeX, 531.31, maxW, fs);
+  drawWrappedText(page1, font, nd(data.stockExchanges), writeX, 516.79, maxW, fs);
+
+  // Page 4 – financials line items include Net worth / Turnover (as per template)
+  if (pdfDoc.getPageCount() >= 4) {
+    const page4 = pdfDoc.getPage(3);
+    // These y-values were located via pdf text extraction for the label row.
+    // Values are placed to the right of the row in the blank area.
+    drawWrappedText(page4, font, nd(data.netWorth), writeX, 480.55, maxW, fs);
+    // Turnover appears nearby; we place slightly below net worth for typical layout.
+    drawWrappedText(page4, font, nd(data.turnover), writeX, 466.0, maxW, fs);
+  }
+
+  const out = await pdfDoc.save();
+  return new Blob([out], { type: 'application/pdf' });
 };
 
 export const generateESGReport = (data) => {

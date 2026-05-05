@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useHistory } from 'react-router-dom';
-import { generateBRSRReportPDF } from '../utils/reportGenerator';
+import { generateBRSRReportHTML, generateBRSRReportPDF, generateBRSRReportPDFFromTemplate } from '../utils/reportGenerator';
 import './FinalReportPage.css';
 
 const FinalReportPage = () => {
@@ -89,21 +89,45 @@ const FinalReportPage = () => {
 
   const handleDownloadPDF = () => {
     if (source === 'BRSR' && brsrData) {
-      try {
-        const pdfBlob = generateBRSRReportPDF(brsrData);
-        const url = URL.createObjectURL(pdfBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${brsrData.companyName || 'BRSR'}-SEBI-BRSR-Report.pdf`;
-        link.click();
-        URL.revokeObjectURL(url);
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to generate BRSR PDF:', err);
-        alert('Failed to generate BRSR PDF. Please try again.');
-      }
+      (async () => {
+        try {
+          const pdfBlob = await generateBRSRReportPDFFromTemplate(brsrData);
+          const url = URL.createObjectURL(pdfBlob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `${brsrData.companyName || 'BRSR'}-SEBI-BRSR-Annexure-Report.pdf`;
+          link.click();
+          URL.revokeObjectURL(url);
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error('Failed to generate BRSR template PDF:', err);
+          alert('Failed to generate the template-based BRSR PDF. Please try again.');
+        }
+      })();
     } else {
       alert('PDF download is currently available for BRSR reports. ESG/GRI PDFs can be added next.');
+    }
+  };
+
+  const handleOpenBRSRHTML = () => {
+    if (source !== 'BRSR' || !brsrData) {
+      alert('BRSR HTML is only available for BRSR reports.');
+      return;
+    }
+    try {
+      const html = generateBRSRReportHTML(brsrData);
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const win = window.open(url, '_blank', 'noopener,noreferrer');
+      if (!win) {
+        alert('Popup blocked. Please allow popups to view the HTML report.');
+      }
+      // Allow the new tab time to load before revoking (safe in most browsers).
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to generate BRSR HTML:', err);
+      alert('Failed to generate BRSR HTML. Please try again.');
     }
   };
 
@@ -732,6 +756,16 @@ const FinalReportPage = () => {
         >
           {source === 'BRSR' ? 'Back to BRSR form' : 'Back to home'}
         </button>
+        {source === 'BRSR' && (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleOpenBRSRHTML}
+            style={{ marginLeft: 12 }}
+          >
+            View Official BRSR (HTML)
+          </button>
+        )}
         <button
           type="button"
           className="btn btn-primary btn-lg final-big-green-button"
