@@ -1,0 +1,130 @@
+[
+  {
+    "id": 1,
+    "question": "Do you have a documented cybersecurity policy?",
+    "questionType": "Yes/No",
+    "sector": "Technology",
+    "framework": "ISO 27001"
+  },
+  {
+    "id": 2,
+    "question": "How often are security audits conducted?",
+    "questionType": "Multiple Choice",
+    "options": ["Annually", "Semi-annually", "Quarterly", "Monthly", "As needed"],
+    "sector": "Technology",
+    "framework": "NIST"
+  },
+  {
+    "id": 3,
+    "question": "What percentage of energy consumption comes from renewable sources?",
+    "questionType": "Numeric",
+    "sector": "Manufacturing",
+    "framework": "GRI"
+  },
+  {
+    "id": 4,
+    "question": "Do you disclose Scope 1 and Scope 2 greenhouse gas emissions?",
+    "questionType": "Yes/No",
+    "sector": "Energy",
+    "framework": "TCFD"
+  },
+  {
+    "id": 5,
+    "question": "Describe your board-level oversight of climate-related risks.",
+    "questionType": "Text",
+    "sector": "Finance",
+    "framework": "TCFD"
+  },
+  {
+    "id": 6,
+    "question": "Do you integrate ESG factors into lending and investment decisions?",
+    "questionType": "Yes/No",
+    "sector": "Finance",
+    "framework": "GRI"
+  },
+  {
+    "id": 7,
+    "question": "What is your total water withdrawal by source?",
+    "questionType": "Numeric",
+    "sector": "Agriculture",
+    "framework": "GRI"
+  },
+  {
+    "id": 8,
+    "question": "Do you use sustainable packaging for products sold?",
+    "questionType": "Yes/No",
+    "sector": "Retail",
+    "framework": "GRI"
+  },
+  {
+    "id": 9,
+    "question": "How do you screen suppliers for human rights compliance?",
+    "questionType": "Text",
+    "sector": "Retail",
+    "framework": "ISSB / SASB"
+  },
+  {
+    "id": 10,
+    "question": "Do you report patient safety incidents and corrective actions?",
+    "questionType": "Yes/No",
+    "sector": "Healthcare",
+    "framework": "GRI"
+  },
+  {
+    "id": 11,
+    "question": "What is your fleet average fuel efficiency or emissions intensity?",
+    "questionType": "Numeric",
+    "sector": "Transportation",
+    "framework": "CDP"
+  },
+  {
+    "id": 12,
+    "question": "Do you assess biodiversity impacts for operations in or near protected areas?",
+    "questionType": "Yes/No",
+    "sector": "Construction",
+    "framework": "GRI"
+  },
+  {
+    "id": 13,
+    "question": "Do you provide anti-corruption training to employees?",
+    "questionType": "Yes/No",
+    "sector": "Other",
+    "framework": "GRI"
+  },
+  {
+    "id": 14,
+    "question": "How frequently do you conduct a materiality assessment?",
+    "questionType": "Multiple Choice",
+    "options": ["Annually", "Every 2 years", "Every 3 years", "Ad hoc"],
+    "sector": "Other",
+    "framework": "CSRD / ESRS"
+  },
+  {
+    "id": 15,
+    "question": "Do you disclose climate-related financial risks under SEC rules?",
+    "questionType": "Yes/No",
+    "sector": "Finance",
+    "framework": "US SEC Climate Disclosure"
+  },
+  {
+    "id": 16,
+    "question": "What e-waste management practices are in place?",
+    "questionType": "Text",
+    "sector": "Technology",
+    "framework": "GRI"
+  },
+  {
+    "id": 17,
+    "question": "Do you have a net-zero or science-based emissions target?",
+    "questionType": "Yes/No",
+    "sector": "Energy",
+    "framework": "CDP"
+  },
+  {
+    "id": 18,
+    "question": "What percentage of procurement spend is with local suppliers?",
+    "questionType": "Numeric",
+    "sector": "Manufacturing",
+    "framework": "BRSR"
+  }
+]

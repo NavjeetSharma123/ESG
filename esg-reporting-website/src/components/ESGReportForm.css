@@ -198,3 +198,154 @@
   padding: 1rem 2rem;
   font-size: 1.05rem;
 }
+
+.questions-section .questions-intro {
+  color: #5a6c63;
+  margin: -0.5rem 0 1.25rem;
+  font-size: 0.9rem;
+}
+
+.questions-filters {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.questions-count {
+  font-size: 0.85rem;
+  color: #5a6c63;
+  margin: 0 0 0.75rem;
+}
+
+.questions-status {
+  color: #5a6c63;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.questions-status-error {
+  color: #9b2c2c;
+}
+
+.questions-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e8f0ec;
+  border-radius: 10px;
+}
+
+.questions-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  min-width: 760px;
+}
+
+.questions-table thead {
+  background: #f4f9f7;
+}
+
+.questions-table th,
+.questions-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e8f0ec;
+  vertical-align: top;
+}
+
+.questions-table th {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #165a42;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.questions-table tbody tr:hover {
+  background: rgba(22, 90, 66, 0.03);
+}
+
+.questions-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.questions-table td:first-child {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: #5a6c63;
+}
+
+.questions-empty {
+  text-align: center;
+  color: #5a6c63;
+  padding: 2rem 1rem !important;
+}
+
+.questions-table .question-answer-input {
+  min-width: 140px;
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  font-size: 0.875rem;
+}
+
+.questions-table .question-yn-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #0d3b2c;
+}
+
+.questions-table .question-yn-label input[type='checkbox'] {
+  width: auto;
+  margin: 0;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .questions-filters {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .questions-table {
+    min-width: 0;
+  }
+
+  .questions-table thead {
+    display: none;
+  }
+
+  .questions-table tbody tr {
+    display: block;
+    border-bottom: 1px solid #e8f0ec;
+    padding: 0.75rem 0;
+  }
+
+  .questions-table tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .questions-table td {
+    display: block;
+    border-bottom: none;
+    padding: 0.35rem 1rem;
+  }
+
+  .questions-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #165a42;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 0.15rem;
+  }
+
+  .questions-empty {
+    display: block;
+  }
+}

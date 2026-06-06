@@ -38,6 +38,140 @@ const ESGReportForm = () => {
   const presetCompany = (location && location.state && location.state.presetCompany) || null;
 
   const [openTipId, setOpenTipId] = useState(null);
+  const [questions, setQuestions] = useState([]);
+  const [questionsLoading, setQuestionsLoading] = useState(true);
+  const [questionsError, setQuestionsError] = useState('');
+  const [questionSearch, setQuestionSearch] = useState('');
+  const [sectorFilter, setSectorFilter] = useState('');
+  const [frameworkFilter, setFrameworkFilter] = useState('');
+  const [questionAnswers, setQuestionAnswers] = useState({});
+
+  const handleQuestionAnswer = (id, value) => {
+    setQuestionAnswers((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const renderQuestionInput = (q) => {
+    const type = String(q.questionType || '').toLowerCase();
+    const value = questionAnswers[q.id];
+
+    if (type === 'yes/no') {
+      return (
+        <label className="question-yn-label">
+          <input
+            type="checkbox"
+            checked={!!value}
+            onChange={(e) => handleQuestionAnswer(q.id, e.target.checked)}
+          />
+          <span>Yes</span>
+        </label>
+      );
+    }
+
+    if (type === 'numeric') {
+      return (
+        <input
+          type="number"
+          className="question-answer-input"
+          value={value ?? ''}
+          onChange={(e) => handleQuestionAnswer(q.id, e.target.value)}
+          placeholder="Enter a number"
+        />
+      );
+    }
+
+    if (type === 'text') {
+      return (
+        <input
+          type="text"
+          className="question-answer-input"
+          value={value ?? ''}
+          onChange={(e) => handleQuestionAnswer(q.id, e.target.value)}
+          placeholder="Enter your answer"
+        />
+      );
+    }
+
+    if (type === 'multiple choice') {
+      const options = Array.isArray(q.options) ? q.options : [];
+      return (
+        <select
+          className="question-answer-input"
+          value={value ?? ''}
+          onChange={(e) => handleQuestionAnswer(q.id, e.target.value)}
+        >
+          <option value="">Select an option</option>
+          {options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
+    return (
+      <input
+        type="text"
+        className="question-answer-input"
+        value={value ?? ''}
+        onChange={(e) => handleQuestionAnswer(q.id, e.target.value)}
+        placeholder="Enter your answer"
+      />
+    );
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch(`${process.env.PUBLIC_URL || ''}/questions.json`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to load questions');
+        return res.json();
+      })
+      .then((data) => {
+        if (!cancelled) {
+          setQuestions(Array.isArray(data) ? data : []);
+          setQuestionsError('');
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setQuestions([]);
+          setQuestionsError('Unable to load questions. Please try again later.');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setQuestionsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const questionSectors = useMemo(() => {
+    const sectors = [...new Set(questions.map((q) => q.sector).filter(Boolean))];
+    return sectors.sort();
+  }, [questions]);
+
+  const questionFrameworks = useMemo(() => {
+    const frameworks = [...new Set(questions.map((q) => q.framework).filter(Boolean))];
+    return frameworks.sort();
+  }, [questions]);
+
+  const filteredQuestions = useMemo(() => {
+    const search = questionSearch.trim().toLowerCase();
+    return questions.filter((q) => {
+      const matchesSearch =
+        !search ||
+        String(q.question || '')
+          .toLowerCase()
+          .includes(search);
+      const matchesSector = !sectorFilter || q.sector === sectorFilter;
+      const matchesFramework = !frameworkFilter || q.framework === frameworkFilter;
+      return matchesSearch && matchesSector && matchesFramework;
+    });
+  }, [questions, questionSearch, sectorFilter, frameworkFilter]);
   useEffect(() => {
     const onDocMouseDown = (e) => {
       if (!(e.target instanceof Element)) return;
@@ -74,6 +208,106 @@ const ESGReportForm = () => {
       employeeCount: '',
       revenue: '',
       website: '',
+      // GRI (questionnaires)
+      griOwnershipStructure: '',
+      griMarketsServed: '',
+      griScaleOfOrganization: '',
+      griKeyIros: '',
+      griSustainabilityBusinessStrategyAlignment: '',
+      griValuesAndCodeOfConduct: '',
+      griGovernanceStructureBoardComposition: '',
+      griMaterialTopicsIdentification: '',
+      griMaterialityMethodology: '',
+      griTopEsgMaterialIssues: '',
+      griMaterialityAssessmentFrequency: '',
+      griEnergyIntensityPerUnitOutput: '',
+      griEnergyReductionInitiatives: '',
+      griEmissionIntensity: '',
+      griTotalWaterWithdrawalBySource: '',
+      griDischargeQualityAndTreatment: '',
+      griWasteRecyclingAndDisposalMethods: '',
+      griOperationsInProtectedAreas: '',
+      griBiodiversityImpact: '',
+      griBiodiversityRestorationInitiatives: '',
+      griNewHiresAndTurnoverRate: '',
+      griEmployeeBenefits: '',
+      griWorkerRepresentationUnions: '',
+      griSupplierHumanRightsScreening: '',
+      griProductSafetyIncidents: '',
+      griMarketingLabelingCompliance: '',
+      griEconomicPerformanceFinancials: '',
+      griGovernmentFinancialAssistance: '',
+      griCorruptionIncidents: '',
+      griAntiCorruptionTraining: '',
+      griLocalSuppliersPercent: '',
+      griSupplierSelectionEsgCriteria: '',
+      griManufacturingResourceEfficiency: '',
+      griManufacturingWasteReductionTechniques: '',
+      griManufacturingSustainableRawMaterialSourcingPolicies: '',
+      griTechDataPrivacyCybersecurityMeasures: '',
+      griTechDataCenterEnergyUsage: '',
+      griTechEwasteManagementPractices: '',
+      griFinanceEsgIntegrationInLendingInvestments: '',
+      griFinanceExposureToHighCarbonIndustries: '',
+      griFinanceFinancialInclusionInitiatives: '',
+      griRetailSustainablePackagingPractices: '',
+      griRetailSupplyChainTraceability: '',
+      griRetailProductLifecycleImpact: '',
+      griEnergyTransitionToRenewables: '',
+      griEnergySpillIncidentsEnvironmentalRisks: '',
+      griEnergyCarbonNeutralityTargets: '',
+      griHealthcareDrugSafetyAndClinicalTrialEthics: '',
+      griHealthcareAccessToMedicines: '',
+      griHealthcareComplianceWithHealthRegulations: '',
+      // Common questions for all frameworks/sectors
+      commonLegalNameAddressCountries: '',
+      commonBusinessActivitiesProducts: '',
+      commonEmployeesByGenderTypeLocation: '',
+      commonSupplyChainStructure: '',
+      commonBoardOversight: '',
+      commonManagementResponsibility: '',
+      commonKpiLinkedCompensation: '',
+      commonLeadershipStatement: '',
+      commonStrategyIntegration: '',
+      commonCodeOfConduct: '',
+      commonAntiBriberyPolicy: '',
+      commonEthicsViolations: '',
+      commonWhistleblowerMechanism: '',
+      commonEthicsTraining: '',
+      commonStakeholdersAndIdentification: '',
+      commonStakeholderEngagementMethods: '',
+      commonStakeholderConcerns: '',
+      commonEnergyTotalRenewableNonRenewable: '',
+      commonScope1Scope2: '',
+      commonScope3: '',
+      commonEmissionTargetsProgress: '',
+      commonNetZeroCommitment: '',
+      commonWaterConsumptionRecycling: '',
+      commonWasteHazardousNonHazardous: '',
+      commonEnvironmentalCompliance: '',
+      commonPhysicalClimateRisks: '',
+      commonTransitionRisks: '',
+      commonRiskIntegrationERM: '',
+      commonClimateImpactOnBusiness: '',
+      commonWorkforceDiversity: '',
+      commonHealthSafetyMetrics: '',
+      commonTrainingDevelopment: '',
+      commonGenderPayEquity: '',
+      commonHumanRightsPolicy: '',
+      commonChildForcedLabourPolicy: '',
+      commonFreedomOfAssociation: '',
+      commonHumanRightsIncidents: '',
+      commonSupplierScreening: '',
+      commonSupplierCodeOfConduct: '',
+      commonResponsibleSourcing: '',
+      commonSupplierAudits: '',
+      commonExternalAssurance: '',
+      commonInternationalAlignment: '',
+      commonKeySustainabilityKpis: '',
+      commonYearOnYearProgress: '',
+      commonCsrExpenditurePrograms: '',
+      commonCsrImpactAssessment: '',
+      commonMarginalizedEngagement: '',
       // Environmental
       scope1Emissions: '',
       scope1FuelStationaryDetails: '',
@@ -159,6 +393,8 @@ const ESGReportForm = () => {
 
   const sectionRefs = useRef({
     company: null,
+    common: null,
+    gri: null,
     environmental: null,
     cdp: null,
     social: null,
@@ -167,6 +403,8 @@ const ESGReportForm = () => {
   const sections = useMemo(
     () => [
       { id: 'company', label: 'Company' },
+      { id: 'common', label: 'Common' },
+      { id: 'gri', label: 'GRI' },
       { id: 'environmental', label: 'Environmental' },
       { id: 'cdp', label: 'CDP' },
       { id: 'social', label: 'Social' },
@@ -175,7 +413,11 @@ const ESGReportForm = () => {
     []
   );
   const visibleSections = useMemo(() => {
-    return sections.filter((s) => (s.id === 'cdp' ? hasFramework('CDP') : true));
+    return sections.filter((s) => {
+      if (s.id === 'cdp') return hasFramework('CDP');
+      if (s.id === 'gri') return hasFramework('GRI');
+      return true;
+    });
   }, [hasFramework, sections]);
   const [activeSectionId, setActiveSectionId] = useState('company');
   const progressFieldKeys = useMemo(() => {
@@ -186,6 +428,54 @@ const ESGReportForm = () => {
       'hqLocation',
       'employeeCount',
       'esgFrameworks',
+      'commonLegalNameAddressCountries',
+      'commonBusinessActivitiesProducts',
+      'commonEmployeesByGenderTypeLocation',
+      'commonSupplyChainStructure',
+      'commonBoardOversight',
+      'commonManagementResponsibility',
+      'commonKpiLinkedCompensation',
+      'commonLeadershipStatement',
+      'commonStrategyIntegration',
+      'commonCodeOfConduct',
+      'commonAntiBriberyPolicy',
+      'commonEthicsViolations',
+      'commonWhistleblowerMechanism',
+      'commonEthicsTraining',
+      'commonStakeholdersAndIdentification',
+      'commonStakeholderEngagementMethods',
+      'commonStakeholderConcerns',
+      'commonEnergyTotalRenewableNonRenewable',
+      'commonScope1Scope2',
+      'commonScope3',
+      'commonEmissionTargetsProgress',
+      'commonNetZeroCommitment',
+      'commonWaterConsumptionRecycling',
+      'commonWasteHazardousNonHazardous',
+      'commonEnvironmentalCompliance',
+      'commonPhysicalClimateRisks',
+      'commonTransitionRisks',
+      'commonRiskIntegrationERM',
+      'commonClimateImpactOnBusiness',
+      'commonWorkforceDiversity',
+      'commonHealthSafetyMetrics',
+      'commonTrainingDevelopment',
+      'commonGenderPayEquity',
+      'commonHumanRightsPolicy',
+      'commonChildForcedLabourPolicy',
+      'commonFreedomOfAssociation',
+      'commonHumanRightsIncidents',
+      'commonSupplierScreening',
+      'commonSupplierCodeOfConduct',
+      'commonResponsibleSourcing',
+      'commonSupplierAudits',
+      'commonExternalAssurance',
+      'commonInternationalAlignment',
+      'commonKeySustainabilityKpis',
+      'commonYearOnYearProgress',
+      'commonCsrExpenditurePrograms',
+      'commonCsrImpactAssessment',
+      'commonMarginalizedEngagement',
     ];
 
     if (
@@ -243,6 +533,61 @@ const ESGReportForm = () => {
         'esgTargetsSet',
         'ethicsPolicy',
         'governanceInitiatives'
+      );
+    }
+
+    if (hasFramework('GRI')) {
+      keys.push(
+        'griOwnershipStructure',
+        'griMarketsServed',
+        'griScaleOfOrganization',
+        'griKeyIros',
+        'griSustainabilityBusinessStrategyAlignment',
+        'griValuesAndCodeOfConduct',
+        'griGovernanceStructureBoardComposition',
+        'griMaterialTopicsIdentification',
+        'griMaterialityMethodology',
+        'griTopEsgMaterialIssues',
+        'griMaterialityAssessmentFrequency',
+        'griEnergyIntensityPerUnitOutput',
+        'griEnergyReductionInitiatives',
+        'griEmissionIntensity',
+        'griTotalWaterWithdrawalBySource',
+        'griDischargeQualityAndTreatment',
+        'griWasteRecyclingAndDisposalMethods',
+        'griOperationsInProtectedAreas',
+        'griBiodiversityImpact',
+        'griBiodiversityRestorationInitiatives',
+        'griNewHiresAndTurnoverRate',
+        'griEmployeeBenefits',
+        'griWorkerRepresentationUnions',
+        'griSupplierHumanRightsScreening',
+        'griProductSafetyIncidents',
+        'griMarketingLabelingCompliance',
+        'griEconomicPerformanceFinancials',
+        'griGovernmentFinancialAssistance',
+        'griCorruptionIncidents',
+        'griAntiCorruptionTraining',
+        'griLocalSuppliersPercent',
+        'griSupplierSelectionEsgCriteria',
+        'griManufacturingResourceEfficiency',
+        'griManufacturingWasteReductionTechniques',
+        'griManufacturingSustainableRawMaterialSourcingPolicies',
+        'griTechDataPrivacyCybersecurityMeasures',
+        'griTechDataCenterEnergyUsage',
+        'griTechEwasteManagementPractices',
+        'griFinanceEsgIntegrationInLendingInvestments',
+        'griFinanceExposureToHighCarbonIndustries',
+        'griFinanceFinancialInclusionInitiatives',
+        'griRetailSustainablePackagingPractices',
+        'griRetailSupplyChainTraceability',
+        'griRetailProductLifecycleImpact',
+        'griEnergyTransitionToRenewables',
+        'griEnergySpillIncidentsEnvironmentalRisks',
+        'griEnergyCarbonNeutralityTargets',
+        'griHealthcareDrugSafetyAndClinicalTrialEthics',
+        'griHealthcareAccessToMedicines',
+        'griHealthcareComplianceWithHealthRegulations'
       );
     }
 
@@ -519,1337 +864,101 @@ const ESGReportForm = () => {
           </div>
         </section>
 
-        <section
-          id="esg-section-environmental"
-          ref={(el) => {
-            sectionRefs.current.environmental = el;
-          }}
-          className="form-section"
-        >
-          <h2>Environmental Metrics</h2>
-          <p className="field-helper">
-            Fields shown below are tailored to your selected frameworks.
+        <section className="form-section questions-section">
+          <h2>ESG Question Bank</h2>
+          <p className="questions-intro">
+            Browse reporting questions by sector and framework. Use the filters below to narrow the list.
           </p>
-          <div className="form-grid">
-            {(noFrameworkSelected
-              || hasFramework('TCFD')
-              || hasFramework('ISSB / SASB')
-              || hasFramework('CSRD / ESRS')
-              || hasFramework('US SEC Climate Disclosure')) && (
-            <>
-              <div className="form-group">
-                <h3><b><label htmlFor="scope1Emissions">Scope 1 Emissions (tCO₂e) *</label></b></h3>
-                <input
-                  type="text"
-                  id="scope1Emissions"
-                  name="scope1Emissions"
-                  value={formData.scope1Emissions}
-                  onChange={handleChange}
-                  placeholder="Direct emissions"
-                  hidden
-                />
-              </div>
-              <div className="form-group full">
-                <div className="label-row">
-                  <label htmlFor="scope1FuelStationaryDetails">
-                    Fuel Consumption – Stationary Sources
-                  </label>
-                  <InfoTip
-                    id="tip-scope1FuelStationaryDetails"
-                    text="Include: fuel type (diesel, petrol, natural gas, LPG, coal, biomass), quantity consumed, unit of measurement (liters, kg, m³), facility/location, and time period (monthly or annual)."
-                  />
-                </div>
-                <textarea
-                  id="scope1FuelStationaryDetails"
-                  name="scope1FuelStationaryDetails"
-                  rows={3}
-                  value={formData.scope1FuelStationaryDetails}
-                  onChange={handleChange}
-                  placeholder="Enter fuel used in boilers, generators, furnaces, etc.&#10;e.g. Plant A – Diesel – 3,500 – Liters – 2026 annual"
-                />
-              </div>
-              <div className="form-group full">
-                <div className="label-row">
-                  <label htmlFor="scope1CompanyVehicleDetails">Company Vehicle Fuel Usage</label>
-                  <InfoTip
-                    id="tip-scope1CompanyVehicleDetails"
-                    text="Include: vehicle type, fuel type, fuel consumption or distance travelled, and any fuel purchase records."
-                  />
-                </div>
-                <textarea
-                  id="scope1CompanyVehicleDetails"
-                  name="scope1CompanyVehicleDetails"
-                  rows={3}
-                  value={formData.scope1CompanyVehicleDetails}
-                  onChange={handleChange}
-                  placeholder="Enter fuel used in company-owned vehicles.&#10;e.g. Delivery Truck – Diesel – 1,200 L – FY 2026"
-                />
-              </div>
-              <div className="form-group full">
-                <div className="label-row">
-                  <label htmlFor="scope1RefrigerantDetails">
-                    Refrigerants / Air Conditioning Leakage
-                  </label>
-                  <InfoTip
-                    id="tip-scope1RefrigerantDetails"
-                    text="Include: refrigerant type (e.g. R134a, R410a), amount used or replaced, and relevant maintenance records."
-                  />
-                </div>
-                <textarea
-                  id="scope1RefrigerantDetails"
-                  name="scope1RefrigerantDetails"
-                  rows={3}
-                  value={formData.scope1RefrigerantDetails}
-                  onChange={handleChange}
-                  placeholder="Enter refrigerant use and leakage.&#10;e.g. HQ Chiller – R410a – 12 kg replaced – 2026 maintenance"
-                />
-              </div>
-              <div className="form-group full">
-                <div className="label-row">
-                  <label htmlFor="scope1ProcessEmissionsDetails">
-                    Industrial Process Emissions (if applicable)
-                  </label>
-                  <InfoTip
-                    id="tip-scope1ProcessEmissionsDetails"
-                    text="Include: production volumes, raw materials used, and process emissions data for relevant industries (e.g. cement, steel, chemicals)."
-                  />
-                </div>
-                <textarea
-                  id="scope1ProcessEmissionsDetails"
-                  name="scope1ProcessEmissionsDetails"
-                  rows={3}
-                  value={formData.scope1ProcessEmissionsDetails}
-                  onChange={handleChange}
-                  placeholder="Enter process-related emissions.&#10;e.g. Cement line – clinker production volume, kiln fuel mix, calcination data"
-                />
-              </div>
-              <div className="form-group">
-                <h3><b><label htmlFor="scope2Emissions">Scope 2 Emissions (tCO₂e) *</label></b></h3>
-                <input
-                  type="text"
-                  id="scope2Emissions"
-                  name="scope2Emissions"
-                  value={formData.scope2Emissions}
-                  onChange={handleChange}
-                  placeholder="Indirect - purchased energy"
-                  hidden
-                />
-              </div>
-              <div className="form-group full">
-                <div className="label-row">
-                  <label htmlFor="scope2ElectricityDetails">Electricity Consumption</label>
-                  <InfoTip
-                    id="tip-scope2ElectricityDetails"
-                    text="Include: electricity consumed, unit (kWh or MWh), facility location, utility provider, and time period. Use data from electricity bills or energy management systems."
-                  />
-                </div>
-                <textarea
-                  id="scope2ElectricityDetails"
-                  name="scope2ElectricityDetails"
-                  rows={3}
-                  value={formData.scope2ElectricityDetails}
-                  onChange={handleChange}
-                  placeholder="Enter electricity consumed per facility.&#10;e.g. Office HQ – 42,000 – kWh – Utility ABC – FY 2026"
-                />
-              </div>
-              <div className="form-group full">
-                <div className="label-row">
-                  <label htmlFor="scope2ThermalEnergyDetails">
-                    Purchased Heating / Cooling / Steam
-                  </label>
-                  <InfoTip
-                    id="tip-scope2ThermalEnergyDetails"
-                    text="Include: type of energy (steam, heating, cooling), amount consumed, energy supplier, and reporting period."
-                  />
-                </div>
-                <textarea
-                  id="scope2ThermalEnergyDetails"
-                  name="scope2ThermalEnergyDetails"
-                  rows={3}
-                  value={formData.scope2ThermalEnergyDetails}
-                  onChange={handleChange}
-                  placeholder="Enter purchased thermal energy.&#10;e.g. Purchased steam – 12,000 kWh – Supplier XYZ – FY 2026"
-                />
-              </div>
-            </>
-            )}
 
-            {(noFrameworkSelected || hasFramework('GRI') || hasFramework('UN Global Compact') || hasFramework('CDP')) && (
-            <>
-              <div className="form-group">
-                <label htmlFor="scope3Emissions">Scope 3 Emissions (tCO₂e)</label>
-                <input
-                  type="text"
-                  id="scope3Emissions"
-                  name="scope3Emissions"
-                  value={formData.scope3Emissions}
-                  onChange={handleChange}
-                  placeholder="Value chain (if measured)"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="energyConsumption">Energy Consumption (MWh)</label>
-                <input
-                  type="text"
-                  id="energyConsumption"
-                  name="energyConsumption"
-                  value={formData.energyConsumption}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="renewableEnergyPercent">Renewable Energy %</label>
-                <input
-                  type="text"
-                  id="renewableEnergyPercent"
-                  name="renewableEnergyPercent"
-                  value={formData.renewableEnergyPercent}
-                  onChange={handleChange}
-                  placeholder="e.g. 35"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="waterUsage">Water Usage (m³)</label>
-                <input
-                  type="text"
-                  id="waterUsage"
-                  name="waterUsage"
-                  value={formData.waterUsage}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="wasteGenerated">Waste Generated (tons)</label>
-                <input
-                  type="text"
-                  id="wasteGenerated"
-                  name="wasteGenerated"
-                  value={formData.wasteGenerated}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="wasteRecycledPercent">Waste Recycled %</label>
-                <input
-                  type="text"
-                  id="wasteRecycledPercent"
-                  name="wasteRecycledPercent"
-                  value={formData.wasteRecycledPercent}
-                  onChange={handleChange}
-                  placeholder="e.g. 60"
-                />
-              </div>
-              <div className="form-group full">
-                <label htmlFor="environmentalInitiatives">Environmental Initiatives & Notes</label>
-                <textarea
-                  id="environmentalInitiatives"
-                  name="environmentalInitiatives"
-                  rows={3}
-                  value={formData.environmentalInitiatives}
-                  onChange={handleChange}
-                  placeholder="Describe key environmental programs, certifications, or targets..."
-                />
-              </div>
-            </>
-            )}
-            {sectorSelected === 'Technology' && (
-              <div className="form-group full">
-                <label htmlFor="energyConsumption">Technology Questions</label>
-                <input
-                  type="text"
-                  id="energyConsumption"
-                  name="energyConsumption"
-                  value={formData.energyConsumption}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {sectorSelected === 'Manufacturing' && (
-              <div className="form-group full">
-                <label htmlFor="energyConsumption">Manufacturing Questions</label>
-                <input
-                  type="text"
-                  id="energyConsumption"
-                  name="energyConsumption"
-                  value={formData.energyConsumption}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {sectorSelected === 'Finance' && (
-              <div className="form-group full">
-                <label htmlFor="energyConsumption">Finance Questions</label>
-                <input
-                  type="text"
-                  id="energyConsumption"
-                  name="energyConsumption"
-                  value={formData.energyConsumption}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {sectorSelected === 'Retail' && (
-              <div className="form-group full">
-                <label htmlFor="energyConsumption">Retail Questions</label>
-                <input
-                  type="text"
-                  id="energyConsumption"
-                  name="energyConsumption"
-                  value={formData.energyConsumption}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {sectorSelected === 'Energy' && (
-              <div className="form-group full">
-                <label htmlFor="energyConsumption">Energy Questions</label>
-                <input
-                  type="text"
-                  id="energyConsumption"
-                  name="energyConsumption"
-                  value={formData.energyConsumption}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {sectorSelected === 'Healthcare' && (
-              <div className="form-group full">
-                <label htmlFor="energyConsumption">Healthcare Questions</label>
-                <input
-                  type="text"
-                  id="energyConsumption"
-                  name="energyConsumption"
-                  value={formData.energyConsumption}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {sectorSelected === 'Transportation' && (
-              <div className="form-group full">
-                <label htmlFor="energyConsumption">Transportation Questions</label>
-                <input
-                  type="text"
-                  id="energyConsumption"
-                  name="energyConsumption"
-                  value={formData.energyConsumption}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {sectorSelected === 'Construction' && (
-              <div className="form-group full">
-                <label htmlFor="energyConsumption">Construction Questions</label>
-                <input
-                  type="text"
-                  id="energyConsumption"
-                  name="energyConsumption"
-                  value={formData.energyConsumption}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {sectorSelected === 'Agriculture' && (
-              <div className="form-group full">
-                <label htmlFor="energyConsumption">Agriculture Questions</label>
-                <input
-                  type="text"
-                  id="energyConsumption"
-                  name="energyConsumption"
-                  value={formData.energyConsumption}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {hasFramework('CDP') && (
-            <div className="form-group full">
-              <div
-                id="esg-section-cdp"
-                ref={(el) => {
-                  sectionRefs.current.cdp = el;
-                }}
+          <div className="questions-filters">
+            <div className="form-group">
+              <label htmlFor="questionSearch">Search questions</label>
+              <input
+                type="search"
+                id="questionSearch"
+                value={questionSearch}
+                onChange={(e) => setQuestionSearch(e.target.value)}
+                placeholder="Search by question text..."
               />
-              <h3>CDP Climate Questionnaire {sectorSelected} </h3>
-              <p className="field-helper">
-                Complete the CDP climate module below (Sections A–J).
+            </div>
+            <div className="form-group">
+              <label htmlFor="sectorFilter">Sector</label>
+              <select
+                id="sectorFilter"
+                value={sectorFilter}
+                onChange={(e) => setSectorFilter(e.target.value)}
+              >
+                <option value="">All sectors</option>
+                {questionSectors.map((sector) => (
+                  <option key={sector} value={sector}>
+                    {sector}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="frameworkFilter">Framework</label>
+              <select
+                id="frameworkFilter"
+                value={frameworkFilter}
+                onChange={(e) => setFrameworkFilter(e.target.value)}
+              >
+                <option value="">All frameworks</option>
+                {questionFrameworks.map((framework) => (
+                  <option key={framework} value={framework}>
+                    {framework}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {questionsLoading ? (
+            <p className="questions-status">Loading questions...</p>
+          ) : questionsError ? (
+            <p className="questions-status questions-status-error">{questionsError}</p>
+          ) : (
+            <>
+              <p className="questions-count">
+                Showing {filteredQuestions.length} of {questions.length} questions
               </p>
-              <div className="form-grid">
-                <h3>A. Governance</h3>
-                <div className="form-group">
-                  <label htmlFor="cdpBoardReview">Does your Board review climate issues at least once per year?</label>
-                  <select
-                    id="cdpBoardReview"
-                    name="cdpBoardReview"
-                    value={formData.cdpBoardReview}
-                    onChange={handleChange}
-                  >
-                    <option value="">Select</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="cdpBoardLastReviewDate">Date of last review</label>
-                  <input
-                    type="date"
-                    id="cdpBoardLastReviewDate"
-                    name="cdpBoardLastReviewDate"
-                    value={formData.cdpBoardLastReviewDate}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className="form-group full">
-                  <label htmlFor="cdpBoardTopics">Topics discussed</label>
-                  <textarea
-                    id="cdpBoardTopics"
-                    name="cdpBoardTopics"
-                    rows={3}
-                    value={formData.cdpBoardTopics}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className="form-group full">
-                  <label htmlFor="cdpClimateResponsibleTitles">Job titles responsible for climate management</label>
-                  <textarea
-                    id="cdpClimateResponsibleTitles"
-                    name="cdpClimateResponsibleTitles"
-                    rows={2}
-                    value={formData.cdpClimateResponsibleTitles}
-                    onChange={handleChange}
-                    placeholder="e.g. Chief Sustainability Officer, Head of ESG..."
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="cdpExecCompLinked">Are climate KPIs in executive compensation?</label>
-                  <select
-                    id="cdpExecCompLinked"
-                    name="cdpExecCompLinked"
-                    value={formData.cdpExecCompLinked}
-                    onChange={handleChange}
-                  >
-                    <option value="">Select</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                  </select>
-                </div>
-                <div className="form-group full">
-                  <label htmlFor="cdpExecCompDetails">KPI name, metric and % of bonus linked</label>
-                  <textarea
-                    id="cdpExecCompDetails"
-                    name="cdpExecCompDetails"
-                    rows={3}
-                    value={formData.cdpExecCompDetails}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                <h3>B. Risks &amp; Opportunities</h3>
-                <div className="form-group full">
-                  <label htmlFor="cdpRisksSummary">
-                    Climate-related risks (up to 10): type, description, time horizon, financial impact, likelihood
-                  </label>
-                  <textarea
-                    id="cdpRisksSummary"
-                    name="cdpRisksSummary"
-                    rows={4}
-                    value={formData.cdpRisksSummary}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className="form-group full">
-                  <label htmlFor="cdpOpportunitiesSummary">
-                    Climate-related opportunities (up to 5): description, financial benefit, time horizon
-                  </label>
-                  <textarea
-                    id="cdpOpportunitiesSummary"
-                    name="cdpOpportunitiesSummary"
-                    rows={4}
-                    value={formData.cdpOpportunitiesSummary}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                <h3>C. Business Strategy</h3>
-                <div className="form-group">
-                  <label htmlFor="cdpStrategyIntegrated">Incorporated into documented strategy?</label>
-                  <select
-                    id="cdpStrategyIntegrated"
-                    name="cdpStrategyIntegrated"
-                    value={formData.cdpStrategyIntegrated}
-                    onChange={handleChange}
-                  >
-                    <option value="">Select</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                  </select>
-                </div>
-                <div className="form-group full">
-                  <label htmlFor="cdpStrategyExamples">Examples</label>
-                  <textarea
-                    id="cdpStrategyExamples"
-                    name="cdpStrategyExamples"
-                    rows={3}
-                    value={formData.cdpStrategyExamples}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="cdpTransitionPlan">Formal transition plan aligned with net-zero?</label>
-                  <select
-                    id="cdpTransitionPlan"
-                    name="cdpTransitionPlan"
-                    value={formData.cdpTransitionPlan}
-                    onChange={handleChange}
-                  >
-                    <option value="">Select</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                  </select>
-                </div>
-                <div className="form-group full">
-                  <label htmlFor="cdpTransitionPlanDetails">Target year and interim milestones</label>
-                  <textarea
-                    id="cdpTransitionPlanDetails"
-                    name="cdpTransitionPlanDetails"
-                    rows={3}
-                    value={formData.cdpTransitionPlanDetails}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="cdpTcfdAlignment">TCFD alignment</label>
-                  <select
-                    id="cdpTcfdAlignment"
-                    name="cdpTcfdAlignment"
-                    value={formData.cdpTcfdAlignment}
-                    onChange={handleChange}
-                  >
-                    <option value="">Select</option>
-                    <option value="Fully aligned">Fully aligned</option>
-                    <option value="Partially aligned">Partially aligned</option>
-                    <option value="Not aligned">Not aligned</option>
-                  </select>
-                </div>
-
-                <h3>D. Targets &amp; Performance</h3>
-                <div className="form-group">
-                  <label htmlFor="cdpTargetsHave">Emissions reduction targets?</label>
-                  <select
-                    id="cdpTargetsHave"
-                    name="cdpTargetsHave"
-                    value={formData.cdpTargetsHave}
-                    onChange={handleChange}
-                  >
-                    <option value="">Select</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                  </select>
-                </div>
-                <div className="form-group full">
-                  <label htmlFor="cdpTargetsDetails">Targets details</label>
-                  <textarea
-                    id="cdpTargetsDetails"
-                    name="cdpTargetsDetails"
-                    rows={3}
-                    value={formData.cdpTargetsDetails}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                <h3>E. Emissions Data</h3>
-                <div className="form-group full">
-                  <label htmlFor="cdpEmissionsCurrentYear">Current year emissions (Scopes 1/2/3)</label>
-                  <textarea
-                    id="cdpEmissionsCurrentYear"
-                    name="cdpEmissionsCurrentYear"
-                    rows={3}
-                    value={formData.cdpEmissionsCurrentYear}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="cdpEmissionsMethodology">Calculation methodology</label>
-                  <input
-                    type="text"
-                    id="cdpEmissionsMethodology"
-                    name="cdpEmissionsMethodology"
-                    value={formData.cdpEmissionsMethodology}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className="form-group full">
-                  <label htmlFor="cdpEmissionsHistory">Past 3 reporting years emissions</label>
-                  <textarea
-                    id="cdpEmissionsHistory"
-                    name="cdpEmissionsHistory"
-                    rows={3}
-                    value={formData.cdpEmissionsHistory}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                <h3>F. Energy</h3>
-                <div className="form-group">
-                  <label htmlFor="cdpEnergyTotal">Total energy consumption (MWh)</label>
-                  <input
-                    type="text"
-                    id="cdpEnergyTotal"
-                    name="cdpEnergyTotal"
-                    value={formData.cdpEnergyTotal}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="cdpEnergyRenewable">Renewable energy (MWh and %)</label>
-                  <input
-                    type="text"
-                    id="cdpEnergyRenewable"
-                    name="cdpEnergyRenewable"
-                    value={formData.cdpEnergyRenewable}
-                    onChange={handleChange}
-                    placeholder="e.g. 5,000 MWh (35%)"
-                  />
-                </div>
-                <div className="form-group full">
-                  <label htmlFor="cdpEnergyIntensity">Energy intensity (denominator + value)</label>
-                  <input
-                    type="text"
-                    id="cdpEnergyIntensity"
-                    name="cdpEnergyIntensity"
-                    value={formData.cdpEnergyIntensity}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                <h3>G. Emissions Breakdown</h3>
-                <div className="form-group full">
-                  <label htmlFor="cdpEmissionsBreakdown">Scope 1/2 breakdown by facility/geography and source</label>
-                  <textarea
-                    id="cdpEmissionsBreakdown"
-                    name="cdpEmissionsBreakdown"
-                    rows={3}
-                    value={formData.cdpEmissionsBreakdown}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className="form-group full">
-                  <label htmlFor="cdpTopEmissionSources">Top 3 emission sources</label>
-                  <textarea
-                    id="cdpTopEmissionSources"
-                    name="cdpTopEmissionSources"
-                    rows={2}
-                    value={formData.cdpTopEmissionSources}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                <h3>H. Carbon Pricing</h3>
-                <div className="form-group">
-                  <label htmlFor="cdpCarbonPricing">Internal carbon price?</label>
-                  <select
-                    id="cdpCarbonPricing"
-                    name="cdpCarbonPricing"
-                    value={formData.cdpCarbonPricing}
-                    onChange={handleChange}
-                  >
-                    <option value="">Select</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                  </select>
-                </div>
-                <div className="form-group full">
-                  <label htmlFor="cdpCarbonPricingDetails">Details (price, type, decisions influenced)</label>
-                  <textarea
-                    id="cdpCarbonPricingDetails"
-                    name="cdpCarbonPricingDetails"
-                    rows={3}
-                    value={formData.cdpCarbonPricingDetails}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                <h3>I. Engagement</h3>
-                <div className="form-group">
-                  <label htmlFor="cdpSupplierEngagementPercent">% of suppliers engaged (by spend)</label>
-                  <input
-                    type="text"
-                    id="cdpSupplierEngagementPercent"
-                    name="cdpSupplierEngagementPercent"
-                    value={formData.cdpSupplierEngagementPercent}
-                    onChange={handleChange}
-                    placeholder="e.g. 40"
-                  />
-                </div>
-                <div className="form-group full">
-                  <label htmlFor="cdpSupplierRequirements">Supplier emissions reporting requirement (Yes/No + details)</label>
-                  <textarea
-                    id="cdpSupplierRequirements"
-                    name="cdpSupplierRequirements"
-                    rows={3}
-                    value={formData.cdpSupplierRequirements}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className="form-group full">
-                  <label htmlFor="cdpInitiativesCommitments">Commitments (SBTi etc.) (Yes/No + details)</label>
-                  <textarea
-                    id="cdpInitiativesCommitments"
-                    name="cdpInitiativesCommitments"
-                    rows={3}
-                    value={formData.cdpInitiativesCommitments}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                <h3>J. Verification</h3>
-                <div className="form-group">
-                  <label htmlFor="cdpVerificationStatus">Scope 1 &amp; 2 externally verified?</label>
-                  <select
-                    id="cdpVerificationStatus"
-                    name="cdpVerificationStatus"
-                    value={formData.cdpVerificationStatus}
-                    onChange={handleChange}
-                  >
-                    <option value="">Select</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                  </select>
-                </div>
-                <div className="form-group full">
-                  <label htmlFor="cdpVerificationDetails">Verification details</label>
-                  <textarea
-                    id="cdpVerificationDetails"
-                    name="cdpVerificationDetails"
-                    rows={3}
-                    value={formData.cdpVerificationDetails}
-                    onChange={handleChange}
-                  />
-                </div>
-              </div>
-            </div>
-            )}
-          </div>
-        </section>
-
-        <section
-          id="esg-section-social"
-          ref={(el) => {
-            sectionRefs.current.social = el;
-          }}
-          className="form-section"
-        >
-          <h2>Social Metrics</h2>
-          <p className="field-helper">
-            Social disclosures are especially relevant for GRI, UN Global Compact and BRSR.
-          </p>
-          <div className="form-grid">
-            {(noFrameworkSelected || hasFramework('GRI') || hasFramework('UN Global Compact') || hasFramework('BRSR')) && (
-            <>
-              <div className="form-group">
-                <label htmlFor="totalEmployees">Total Employees</label>
-                <input
-                  type="text"
-                  id="totalEmployees"
-                  name="totalEmployees"
-                  value={formData.totalEmployees}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="genderDiversityPercent">Gender Diversity % (women)</label>
-                <input
-                  type="text"
-                  id="genderDiversityPercent"
-                  name="genderDiversityPercent"
-                  value={formData.genderDiversityPercent}
-                  onChange={handleChange}
-                  placeholder="e.g. 45"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="trainingHoursPerEmployee">Training Hours per Employee</label>
-                <input
-                  type="text"
-                  id="trainingHoursPerEmployee"
-                  name="trainingHoursPerEmployee"
-                  value={formData.trainingHoursPerEmployee}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="safetyIncidents">Recordable Safety Incidents</label>
-                <input
-                  type="text"
-                  id="safetyIncidents"
-                  name="safetyIncidents"
-                  value={formData.safetyIncidents}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="communityInvestment">Community Investment ($)</label>
-                <input
-                  type="text"
-                  id="communityInvestment"
-                  name="communityInvestment"
-                  value={formData.communityInvestment}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="employeeTurnoverPercent">Employee Turnover %</label>
-                <input
-                  type="text"
-                  id="employeeTurnoverPercent"
-                  name="employeeTurnoverPercent"
-                  value={formData.employeeTurnoverPercent}
-                  onChange={handleChange}
-                  placeholder="e.g. 12"
-                />
-              </div>
-              <div className="form-group full">
-                <label htmlFor="socialInitiatives">Social Initiatives & Notes</label>
-                <textarea
-                  id="socialInitiatives"
-                  name="socialInitiatives"
-                  rows={3}
-                  value={formData.socialInitiatives}
-                  onChange={handleChange}
-                  placeholder="Diversity programs, community engagement, health & safety..."
-                />
+              <div className="questions-table-wrap">
+                <table className="questions-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">ID</th>
+                      <th scope="col">Question</th>
+                      <th scope="col">Question Type</th>
+                      <th scope="col">Sector</th>
+                      <th scope="col">Framework</th>
+                      <th scope="col">Answer</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredQuestions.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" className="questions-empty">
+                          No questions match your filters.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredQuestions.map((q) => (
+                        <tr key={q.id}>
+                          <td data-label="ID">{q.id}</td>
+                          <td data-label="Question">{q.question}</td>
+                          <td data-label="Question Type">{q.questionType}</td>
+                          <td data-label="Sector">{q.sector}</td>
+                          <td data-label="Framework">{q.framework}</td>
+                          <td data-label="Answer">{renderQuestionInput(q)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </>
-            )}
-          </div>
-        </section>
-
-        <section
-          id="esg-section-governance"
-          ref={(el) => {
-            sectionRefs.current.governance = el;
-          }}
-          className="form-section"
-        >
-          <h2>Governance Metrics</h2>
-          <p className="field-helper">
-            Governance questions are most relevant for TCFD, ISSB / SASB, GRI and CSRD / ESRS.
-          </p>
-          <div className="form-grid">
-            {(noFrameworkSelected
-              || hasFramework('TCFD')
-              || hasFramework('ISSB / SASB')
-              || hasFramework('GRI')
-              || hasFramework('CSRD / ESRS')) && (
-            <>
-              <div className="form-group">
-                <label htmlFor="boardSize">Board Size</label>
-                <input
-                  type="text"
-                  id="boardSize"
-                  name="boardSize"
-                  value={formData.boardSize}
-                  onChange={handleChange}
-                  placeholder="e.g. 9"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="independentDirectorsPercent">Independent Directors %</label>
-                <input
-                  type="text"
-                  id="independentDirectorsPercent"
-                  name="independentDirectorsPercent"
-                  value={formData.independentDirectorsPercent}
-                  onChange={handleChange}
-                  placeholder="e.g. 67"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="sustainabilityCommittee">Sustainability Committee</label>
-                <select
-                  id="sustainabilityCommittee"
-                  name="sustainabilityCommittee"
-                  value={formData.sustainabilityCommittee}
-                  onChange={handleChange}
-                >
-                  <option value="">Select</option>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="esgTargetsSet">ESG Targets Set</label>
-                <select
-                  id="esgTargetsSet"
-                  name="esgTargetsSet"
-                  value={formData.esgTargetsSet}
-                  onChange={handleChange}
-                >
-                  <option value="">Select</option>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="ethicsPolicy">Ethics / Anti-corruption Policy</label>
-                <select
-                  id="ethicsPolicy"
-                  name="ethicsPolicy"
-                  value={formData.ethicsPolicy}
-                  onChange={handleChange}
-                >
-                  <option value="">Select</option>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
-              </div>
-              <div className="form-group full">
-                <label htmlFor="governanceInitiatives">Governance Initiatives & Notes</label>
-                <textarea
-                  id="governanceInitiatives"
-                  name="governanceInitiatives"
-                  rows={3}
-                  value={formData.governanceInitiatives}
-                  onChange={handleChange}
-                  placeholder="Board oversight, risk management, ethics programs..."
-                />
-              </div>
-            </>
-            )}
-          </div>
-        </section>
-
-        {false && (
-        <section className="form-section">
-          <h2>CDP Climate Questionnaire</h2>
-          {!hasFramework('CDP') && (
-          <p className="field-helper">
-            This section is only required if you selected the CDP framework above.
-          </p>
-          )}
-          {hasFramework('CDP') && (
-          <>
-            <h3>A. Governance</h3>
-            <div className="form-grid">
-              <div className="form-group">
-                <label htmlFor="cdpBoardReview">Does your Board review climate issues at least once per year?</label>
-                <select
-                  id="cdpBoardReview"
-                  name="cdpBoardReview"
-                  value={formData.cdpBoardReview}
-                  onChange={handleChange}
-                >
-                  <option value="">Select</option>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="cdpBoardLastReviewDate">Date of last Board review (if applicable)</label>
-                <input
-                  type="text"
-                  id="cdpBoardLastReviewDate"
-                  name="cdpBoardLastReviewDate"
-                  value={formData.cdpBoardLastReviewDate}
-                  onChange={handleChange}
-                  placeholder="e.g. 2026-03-31"
-                />
-              </div>
-              <div className="form-group full">
-                <label htmlFor="cdpBoardTopics">Topics discussed at last Board review</label>
-                <textarea
-                  id="cdpBoardTopics"
-                  name="cdpBoardTopics"
-                  rows={3}
-                  value={formData.cdpBoardTopics}
-                  onChange={handleChange}
-                  placeholder="Summarise key climate-related topics discussed..."
-                />
-              </div>
-              <div className="form-group full">
-                <label htmlFor="cdpClimateResponsibleTitles">
-                  Job titles responsible for climate-related management
-                </label>
-                <textarea
-                  id="cdpClimateResponsibleTitles"
-                  name="cdpClimateResponsibleTitles"
-                  rows={2}
-                  value={formData.cdpClimateResponsibleTitles}
-                  onChange={handleChange}
-                  placeholder="e.g. Chief Sustainability Officer, Head of ESG, Plant Manager..."
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="cdpExecCompLinked">Are climate KPIs in executive compensation?</label>
-                <select
-                  id="cdpExecCompLinked"
-                  name="cdpExecCompLinked"
-                  value={formData.cdpExecCompLinked}
-                  onChange={handleChange}
-                >
-                  <option value="">Select</option>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
-              </div>
-              <div className="form-group full">
-                <label htmlFor="cdpExecCompDetails">
-                  If yes, KPI name, metric and % of bonus linked
-                </label>
-                <textarea
-                  id="cdpExecCompDetails"
-                  name="cdpExecCompDetails"
-                  rows={3}
-                  value={formData.cdpExecCompDetails}
-                  onChange={handleChange}
-                  placeholder="e.g. Scope 1+2 reduction, energy efficiency, CDP score..."
-                />
-              </div>
-            </div>
-
-            <h3>B. Risks &amp; Opportunities</h3>
-            <div className="form-grid">
-              <div className="form-group full">
-                <label htmlFor="cdpRisksSummary">
-                  Climate-related risks (up to 10) with type, description, time horizon, impact and likelihood
-                </label>
-                <textarea
-                  id="cdpRisksSummary"
-                  name="cdpRisksSummary"
-                  rows={4}
-                  value={formData.cdpRisksSummary}
-                  onChange={handleChange}
-                  placeholder="Use a bullet or table-style format to list risks, type (physical/transition), time horizon, impact and likelihood..."
-                />
-              </div>
-              <div className="form-group full">
-                <label htmlFor="cdpOpportunitiesSummary">
-                  Climate-related opportunities (up to 5) with description, financial benefit and time horizon
-                </label>
-                <textarea
-                  id="cdpOpportunitiesSummary"
-                  name="cdpOpportunitiesSummary"
-                  rows={4}
-                  value={formData.cdpOpportunitiesSummary}
-                  onChange={handleChange}
-                  placeholder="Describe opportunities such as new products, efficiency gains, renewable projects..."
-                />
-              </div>
-            </div>
-
-            <h3>C. Business Strategy</h3>
-            <div className="form-grid">
-              <div className="form-group">
-                <label htmlFor="cdpStrategyIntegrated">
-                  Is climate change integrated into documented business strategy?
-                </label>
-                <select
-                  id="cdpStrategyIntegrated"
-                  name="cdpStrategyIntegrated"
-                  value={formData.cdpStrategyIntegrated}
-                  onChange={handleChange}
-                >
-                  <option value="">Select</option>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
-              </div>
-              <div className="form-group full">
-                <label htmlFor="cdpStrategyExamples">
-                  If yes, provide examples (products, capex decisions, etc.)
-                </label>
-                <textarea
-                  id="cdpStrategyExamples"
-                  name="cdpStrategyExamples"
-                  rows={3}
-                  value={formData.cdpStrategyExamples}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="cdpTransitionPlan">
-                  Do you have a formal transition plan aligned with net-zero?
-                </label>
-                <select
-                  id="cdpTransitionPlan"
-                  name="cdpTransitionPlan"
-                  value={formData.cdpTransitionPlan}
-                  onChange={handleChange}
-                >
-                  <option value="">Select</option>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
-              </div>
-              <div className="form-group full">
-                <label htmlFor="cdpTransitionPlanDetails">
-                  If yes, target year, interim milestones and key levers
-                </label>
-                <textarea
-                  id="cdpTransitionPlanDetails"
-                  name="cdpTransitionPlanDetails"
-                  rows={3}
-                  value={formData.cdpTransitionPlanDetails}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="cdpTcfdAlignment">
-                  Alignment with TCFD recommendations
-                </label>
-                <select
-                  id="cdpTcfdAlignment"
-                  name="cdpTcfdAlignment"
-                  value={formData.cdpTcfdAlignment}
-                  onChange={handleChange}
-                >
-                  <option value="">Select</option>
-                  <option value="Fully aligned">Fully aligned</option>
-                  <option value="Partially aligned">Partially aligned</option>
-                  <option value="Not aligned">Not aligned</option>
-                </select>
-              </div>
-            </div>
-
-            <h3>D. Targets &amp; Performance</h3>
-            <div className="form-grid">
-              <div className="form-group">
-                <label htmlFor="cdpTargetsHave">Do you have emissions reduction targets?</label>
-                <select
-                  id="cdpTargetsHave"
-                  name="cdpTargetsHave"
-                  value={formData.cdpTargetsHave}
-                  onChange={handleChange}
-                >
-                  <option value="">Select</option>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
-              </div>
-              <div className="form-group full">
-                <label htmlFor="cdpTargetsDetails">
-                  For each target, describe type, base year, target year, % reduction and % achieved
-                </label>
-                <textarea
-                  id="cdpTargetsDetails"
-                  name="cdpTargetsDetails"
-                  rows={3}
-                  value={formData.cdpTargetsDetails}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-
-            <h3>E. Emissions Data</h3>
-            <div className="form-grid">
-              <div className="form-group full">
-                <label htmlFor="cdpEmissionsCurrentYear">
-                  Current reporting year emissions (Scope 1, Scope 2 – location/market, Scope 3 with categories)
-                </label>
-                <textarea
-                  id="cdpEmissionsCurrentYear"
-                  name="cdpEmissionsCurrentYear"
-                  rows={3}
-                  value={formData.cdpEmissionsCurrentYear}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="cdpEmissionsMethodology">
-                  Calculation methodology (e.g. GHG Protocol)
-                </label>
-                <input
-                  type="text"
-                  id="cdpEmissionsMethodology"
-                  name="cdpEmissionsMethodology"
-                  value={formData.cdpEmissionsMethodology}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="form-group full">
-                <label htmlFor="cdpEmissionsHistory">
-                  Emissions for the past 3 reporting years
-                </label>
-                <textarea
-                  id="cdpEmissionsHistory"
-                  name="cdpEmissionsHistory"
-                  rows={3}
-                  value={formData.cdpEmissionsHistory}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-
-            <h3>F. Energy</h3>
-            <div className="form-grid">
-              <div className="form-group">
-                <label htmlFor="cdpEnergyTotal">Total energy consumption (MWh)</label>
-                <input
-                  type="text"
-                  id="cdpEnergyTotal"
-                  name="cdpEnergyTotal"
-                  value={formData.cdpEnergyTotal}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="cdpEnergyRenewable">
-                  Renewable energy consumption (MWh and % of total)
-                </label>
-                <input
-                  type="text"
-                  id="cdpEnergyRenewable"
-                  name="cdpEnergyRenewable"
-                  value={formData.cdpEnergyRenewable}
-                  onChange={handleChange}
-                  placeholder="e.g. 5,000 MWh (35%)"
-                />
-              </div>
-              <div className="form-group full">
-                <label htmlFor="cdpEnergyIntensity">
-                  Energy intensity and denominator (e.g. per unit production)
-                </label>
-                <input
-                  type="text"
-                  id="cdpEnergyIntensity"
-                  name="cdpEnergyIntensity"
-                  value={formData.cdpEnergyIntensity}
-                  onChange={handleChange}
-                  placeholder="e.g. 1.2 MWh per tonne of product"
-                />
-              </div>
-            </div>
-
-            <h3>G. Emissions Breakdown</h3>
-            <div className="form-grid">
-              <div className="form-group full">
-                <label htmlFor="cdpEmissionsBreakdown">
-                  Breakdown of Scope 1 and 2 by facility/geography and source
-                </label>
-                <textarea
-                  id="cdpEmissionsBreakdown"
-                  name="cdpEmissionsBreakdown"
-                  rows={3}
-                  value={formData.cdpEmissionsBreakdown}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="form-group full">
-                <label htmlFor="cdpTopEmissionSources">
-                  Top 3 emission sources and approximate contribution
-                </label>
-                <textarea
-                  id="cdpTopEmissionSources"
-                  name="cdpTopEmissionSources"
-                  rows={2}
-                  value={formData.cdpTopEmissionSources}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-
-            <h3>H. Carbon Pricing</h3>
-            <div className="form-grid">
-              <div className="form-group">
-                <label htmlFor="cdpCarbonPricing">Do you apply an internal carbon price?</label>
-                <select
-                  id="cdpCarbonPricing"
-                  name="cdpCarbonPricing"
-                  value={formData.cdpCarbonPricing}
-                  onChange={handleChange}
-                >
-                  <option value="">Select</option>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
-              </div>
-              <div className="form-group full">
-                <label htmlFor="cdpCarbonPricingDetails">
-                  If yes, price per ton, type and decisions influenced
-                </label>
-                <textarea
-                  id="cdpCarbonPricingDetails"
-                  name="cdpCarbonPricingDetails"
-                  rows={3}
-                  value={formData.cdpCarbonPricingDetails}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-
-            <h3>I. Engagement</h3>
-            <div className="form-grid">
-              <div className="form-group">
-                <label htmlFor="cdpSupplierEngagementPercent">
-                  % of suppliers (by spend) engaged on climate issues
-                </label>
-                <input
-                  type="text"
-                  id="cdpSupplierEngagementPercent"
-                  name="cdpSupplierEngagementPercent"
-                  value={formData.cdpSupplierEngagementPercent}
-                  onChange={handleChange}
-                  placeholder="e.g. 40"
-                />
-              </div>
-              <div className="form-group full">
-                <label htmlFor="cdpSupplierRequirements">
-                  Do you require suppliers to report emissions? Add details.
-                </label>
-                <textarea
-                  id="cdpSupplierRequirements"
-                  name="cdpSupplierRequirements"
-                  rows={3}
-                  value={formData.cdpSupplierRequirements}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="form-group full">
-                <label htmlFor="cdpInitiativesCommitments">
-                  Commitments to SBTi or similar initiatives (Yes/No and details)
-                </label>
-                <textarea
-                  id="cdpInitiativesCommitments"
-                  name="cdpInitiativesCommitments"
-                  rows={3}
-                  value={formData.cdpInitiativesCommitments}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-
-            <h3>J. Verification</h3>
-            <div className="form-grid">
-              <div className="form-group">
-                <label htmlFor="cdpVerificationStatus">
-                  Are Scope 1 and 2 emissions externally verified?
-                </label>
-                <select
-                  id="cdpVerificationStatus"
-                  name="cdpVerificationStatus"
-                  value={formData.cdpVerificationStatus}
-                  onChange={handleChange}
-                >
-                  <option value="">Select</option>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
-              </div>
-              <div className="form-group full">
-                <label htmlFor="cdpVerificationDetails">
-                  If yes, standard, assurance level and verifier name
-                </label>
-                <textarea
-                  id="cdpVerificationDetails"
-                  name="cdpVerificationDetails"
-                  rows={3}
-                  value={formData.cdpVerificationDetails}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-          </>
           )}
         </section>
-        )}
 
         <div className="form-actions">
           <button type="submit" className="btn btn-primary btn-lg" style={{position: 'fixed',
