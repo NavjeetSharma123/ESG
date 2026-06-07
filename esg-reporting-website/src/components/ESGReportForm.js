@@ -32,6 +32,32 @@ const getFrameworksForCountry = (country) => {
   return COUNTRY_FRAMEWORKS[country] || COUNTRY_FRAMEWORKS.Other;
 };
 
+const INDUSTRY_SECTOR_ALIASES = {
+  'Financial Services': 'Finance',
+  'Renewable Energy': 'Energy',
+  'Infrastructure & Real Estate': 'Construction',
+};
+
+const normalizeIndustrySector = (industry) => {
+  if (!industry) return '';
+  return INDUSTRY_SECTOR_ALIASES[industry] || industry;
+};
+
+const questionMatchesCompanyInfo = (question, industry, frameworks) => {
+  const sector = normalizeIndustrySector(industry);
+  const hasSector = Boolean(sector);
+  const hasFrameworks = frameworks.length > 0;
+
+  if (!hasSector && !hasFrameworks) return false;
+
+  const matchesSector =
+    !hasSector || question.sector === sector || question.sector === 'Other';
+  const matchesFramework =
+    !hasFrameworks || frameworks.includes(question.framework);
+
+  return matchesSector && matchesFramework;
+};
+
 const ESGReportForm = () => {
   const history = useHistory();
   const location = useLocation();
@@ -42,8 +68,6 @@ const ESGReportForm = () => {
   const [questionsLoading, setQuestionsLoading] = useState(true);
   const [questionsError, setQuestionsError] = useState('');
   const [questionSearch, setQuestionSearch] = useState('');
-  const [sectorFilter, setSectorFilter] = useState('');
-  const [frameworkFilter, setFrameworkFilter] = useState('');
   const [questionAnswers, setQuestionAnswers] = useState({});
 
   const handleQuestionAnswer = (id, value) => {
@@ -149,29 +173,6 @@ const ESGReportForm = () => {
     };
   }, []);
 
-  const questionSectors = useMemo(() => {
-    const sectors = [...new Set(questions.map((q) => q.sector).filter(Boolean))];
-    return sectors.sort();
-  }, [questions]);
-
-  const questionFrameworks = useMemo(() => {
-    const frameworks = [...new Set(questions.map((q) => q.framework).filter(Boolean))];
-    return frameworks.sort();
-  }, [questions]);
-
-  const filteredQuestions = useMemo(() => {
-    const search = questionSearch.trim().toLowerCase();
-    return questions.filter((q) => {
-      const matchesSearch =
-        !search ||
-        String(q.question || '')
-          .toLowerCase()
-          .includes(search);
-      const matchesSector = !sectorFilter || q.sector === sectorFilter;
-      const matchesFramework = !frameworkFilter || q.framework === frameworkFilter;
-      return matchesSearch && matchesSector && matchesFramework;
-    });
-  }, [questions, questionSearch, sectorFilter, frameworkFilter]);
   useEffect(() => {
     const onDocMouseDown = (e) => {
       if (!(e.target instanceof Element)) return;
@@ -389,7 +390,30 @@ const ESGReportForm = () => {
   });
   const hasFramework = (fw) => Array.isArray(formData.esgFrameworks) && formData.esgFrameworks.includes(fw);
   const noFrameworkSelected = !Array.isArray(formData.esgFrameworks) || formData.esgFrameworks.length === 0;
-  const sectorSelected = formData.industry;
+  const selectedSector = normalizeIndustrySector(formData.industry);
+  const selectedFrameworks = Array.isArray(formData.esgFrameworks) ? formData.esgFrameworks : [];
+  const hasSectorSelection = Boolean(selectedSector);
+  const hasFrameworkSelection = selectedFrameworks.length > 0;
+  const companyInfoReady = hasSectorSelection || hasFrameworkSelection;
+
+  const filteredQuestions = useMemo(() => {
+    if (!companyInfoReady) return [];
+
+    const search = questionSearch.trim().toLowerCase();
+    return questions.filter((q) => {
+      const matchesCompanyInfo = questionMatchesCompanyInfo(
+        q,
+        formData.industry,
+        selectedFrameworks
+      );
+      if (!matchesCompanyInfo) return false;
+
+      if (!search) return true;
+      return String(q.question || '')
+        .toLowerCase()
+        .includes(search);
+    });
+  }, [questions, questionSearch, formData.industry, selectedFrameworks, companyInfoReady]);
 
   const sectionRefs = useRef({
     company: null,
@@ -867,7 +891,26 @@ const ESGReportForm = () => {
         <section className="form-section questions-section">
           <h2>ESG Question Bank</h2>
           <p className="questions-intro">
-            Browse reporting questions by sector and framework. Use the filters below to narrow the list.
+            Questions are filtered automatically from your Company Information selections above.
+            {companyInfoReady ? (
+              <>
+                {' '}
+                {hasSectorSelection && (
+                  <>
+                    Sector: <strong>{selectedSector}</strong>
+                  </>
+                )}
+                {hasSectorSelection && hasFrameworkSelection && '; '}
+                {hasFrameworkSelection && (
+                  <>
+                    Frameworks: <strong>{selectedFrameworks.join(', ')}</strong>
+                  </>
+                )}
+                .
+              </>
+            ) : (
+              ' Select an industry sector and/or at least one reporting framework to view questions.'
+            )}
           </p>
 
           <div className="questions-filters">
@@ -879,37 +922,8 @@ const ESGReportForm = () => {
                 value={questionSearch}
                 onChange={(e) => setQuestionSearch(e.target.value)}
                 placeholder="Search by question text..."
+                disabled={!companyInfoReady}
               />
-            </div>
-            <div className="form-group">
-              <label htmlFor="sectorFilter">Sector</label>
-              <select
-                id="sectorFilter"
-                value={sectorFilter}
-                onChange={(e) => setSectorFilter(e.target.value)}
-              >
-                <option value="">All sectors</option>
-                {questionSectors.map((sector) => (
-                  <option key={sector} value={sector}>
-                    {sector}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="frameworkFilter">Framework</label>
-              <select
-                id="frameworkFilter"
-                value={frameworkFilter}
-                onChange={(e) => setFrameworkFilter(e.target.value)}
-              >
-                <option value="">All frameworks</option>
-                {questionFrameworks.map((framework) => (
-                  <option key={framework} value={framework}>
-                    {framework}
-                  </option>
-                ))}
-              </select>
             </div>
           </div>
 
@@ -917,10 +931,17 @@ const ESGReportForm = () => {
             <p className="questions-status">Loading questions...</p>
           ) : questionsError ? (
             <p className="questions-status questions-status-error">{questionsError}</p>
+          ) : !companyInfoReady ? (
+            <p className="questions-status">
+              Select an industry sector and/or ESG reporting framework in Company Information to load
+              relevant questions.
+            </p>
           ) : (
             <>
               <p className="questions-count">
-                Showing {filteredQuestions.length} of {questions.length} questions
+                Showing {filteredQuestions.length} question{filteredQuestions.length === 1 ? '' : 's'}
+                {hasSectorSelection && ` for ${selectedSector}`}
+                {hasFrameworkSelection && ` (${selectedFrameworks.join(', ')})`}
               </p>
               <div className="questions-table-wrap">
                 <table className="questions-table">
@@ -938,7 +959,7 @@ const ESGReportForm = () => {
                     {filteredQuestions.length === 0 ? (
                       <tr>
                         <td colSpan="6" className="questions-empty">
-                          No questions match your filters.
+                          No questions match your selected sector and frameworks.
                         </td>
                       </tr>
                     ) : (
