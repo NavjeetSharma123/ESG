@@ -3,27 +3,22 @@ import { useHistory, useLocation } from 'react-router-dom';
 import './ESGReportForm.css';
 
 const COUNTRY_FRAMEWORKS = {
-  'United States': ['US SEC Climate Disclosure', 'ISSB / SASB', 'TCFD', 'GRI'],
-  'United Kingdom': ['UK SDR', 'TCFD', 'ISSB / SASB', 'GRI'],
-  'European Union': ['CSRD / ESRS', 'SFDR', 'TCFD', 'ISSB / SASB', 'GRI'],
-  India: ['BRSR', 'GRI', 'ISSB / SASB', 'TCFD'],
-  Canada: ['ISSB / SASB', 'TCFD', 'GRI'],
-  Australia: ['ISSB / SASB', 'TCFD', 'GRI'],
-  Singapore: ['ISSB / SASB', 'TCFD', 'GRI'],
-  'United Arab Emirates': ['ISSB / SASB', 'TCFD', 'GRI'],
-  Other: ['GRI', 'ISSB / SASB', 'TCFD'],
+  'United States': ['SASB', 'TCFD', 'GRI'],
+  'United Kingdom': ['TCFD', 'SASB', 'GRI'],
+  'European Union': [ 'TCFD', 'SASB', 'GRI'],
+  India: ['BRSR', 'GRI', 'SASB', 'TCFD'],
+  Canada: ['SASB', 'TCFD', 'GRI'],
+  Australia: ['SASB', 'TCFD', 'GRI'],
+  Singapore: ['SASB', 'TCFD', 'GRI'],
+  'United Arab Emirates': ['SASB', 'TCFD', 'GRI'],
+  Other: ['GRI', 'SASB', 'TCFD'],
 };
 
 const ALL_FRAMEWORKS = [
   'GRI',
-  'ISSB / SASB',
+  'SASB',
   'TCFD',
-  'UN Global Compact',
-  'CDP',
-  'CSRD / ESRS',
-  'SFDR',
-  'UK SDR',
-  'US SEC Climate Disclosure',
+  'UNGC',
   'BRSR',
 ];
 
@@ -105,8 +100,7 @@ const ESGReportForm = () => {
 
     if (type === 'text') {
       return (
-        <input
-          type="text"
+        <textarea
           className="question-answer-input"
           value={value ?? ''}
           onChange={(e) => handleQuestionAnswer(q.id, e.target.value)}
@@ -897,13 +891,13 @@ const ESGReportForm = () => {
                 {' '}
                 {hasSectorSelection && (
                   <>
-                    Sector: <strong>{selectedSector}</strong>
+                   <br/> Sector: <strong>{selectedSector}</strong>
                   </>
                 )}
                 {hasSectorSelection && hasFrameworkSelection && '; '}
                 {hasFrameworkSelection && (
                   <>
-                    Frameworks: <strong>{selectedFrameworks.join(', ')}</strong>
+                    <br/>Frameworks: <strong>{selectedFrameworks.join(', ')}</strong>
                   </>
                 )}
                 .
@@ -947,30 +941,25 @@ const ESGReportForm = () => {
                 <table className="questions-table">
                   <thead>
                     <tr>
-                      <th scope="col">ID</th>
-                      <th scope="col">Question</th>
-                      <th scope="col">Question Type</th>
-                      <th scope="col">Sector</th>
-                      <th scope="col">Framework</th>
-                      <th scope="col">Answer</th>
+                      <th scope="col">Questions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredQuestions.length === 0 ? (
                       <tr>
-                        <td colSpan="6" className="questions-empty">
+                        <td className="questions-empty">
                           No questions match your selected sector and frameworks.
                         </td>
                       </tr>
                     ) : (
                       filteredQuestions.map((q) => (
                         <tr key={q.id}>
-                          <td data-label="ID">{q.id}</td>
-                          <td data-label="Question">{q.question}</td>
-                          <td data-label="Question Type">{q.questionType}</td>
-                          <td data-label="Sector">{q.sector}</td>
-                          <td data-label="Framework">{q.framework}</td>
-                          <td data-label="Answer">{renderQuestionInput(q)}</td>
+                          <td>
+                            <div className="question-item">
+                              <p className="question-text">{q.question}</p>
+                              <div className="question-answer">{renderQuestionInput(q)}</div>
+                            </div>
+                          </td>
                         </tr>
                       ))
                     )}

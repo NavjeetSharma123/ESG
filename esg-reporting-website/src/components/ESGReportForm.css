@@ -238,7 +238,6 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
-  min-width: 760px;
 }
 
 .questions-table thead {
@@ -269,10 +268,21 @@
   border-bottom: none;
 }
 
-.questions-table td:first-child {
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  color: #5a6c63;
+.question-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.question-text {
+  margin: 0;
+  color: #0d3b2c;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.question-answer {
+  max-width: 32rem;
 }
 
 .questions-empty {
@@ -332,17 +342,6 @@
     display: block;
     border-bottom: none;
     padding: 0.35rem 1rem;
-  }
-
-  .questions-table td::before {
-    content: attr(data-label);
-    display: block;
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: #165a42;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    margin-bottom: 0.15rem;
   }
 
   .questions-empty {
