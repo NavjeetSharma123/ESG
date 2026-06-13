@@ -730,21 +730,6 @@ const ESGReportForm = () => {
         </p>
         <div className="esg-progress" aria-label="Form progress">
           <div className="esg-progress-top">
-            <div className="esg-progress-steps">
-              {visibleSections.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  className={`esg-progress-step ${activeSectionId === s.id ? 'is-active' : ''}`}
-                  onClick={() => {
-                    const el = sectionRefs.current[s.id];
-                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
             <div className="esg-progress-pct">{progressPct}%</div>
           </div>
           <div className="esg-progress-track" aria-hidden="true">
