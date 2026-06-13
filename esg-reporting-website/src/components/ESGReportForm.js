@@ -38,17 +38,27 @@ const normalizeIndustrySector = (industry) => {
   return INDUSTRY_SECTOR_ALIASES[industry] || industry;
 };
 
+const isUniversalQuestion = (question) => !question.sector && !question.framework;
+
 const questionMatchesCompanyInfo = (question, industry, frameworks) => {
+  if (isUniversalQuestion(question)) return true;
+
   const sector = normalizeIndustrySector(industry);
   const hasSector = Boolean(sector);
   const hasFrameworks = frameworks.length > 0;
 
   if (!hasSector && !hasFrameworks) return false;
 
+  const questionSector = question.sector || '';
   const matchesSector =
-    !hasSector || question.sector === sector || question.sector === 'Other';
+    !hasSector
+    || !questionSector
+    || questionSector.toLowerCase() === sector.toLowerCase()
+    || questionSector === 'Other';
   const matchesFramework =
-    !hasFrameworks || frameworks.includes(question.framework);
+    !hasFrameworks
+    || !question.framework
+    || frameworks.includes(question.framework);
 
   return matchesSector && matchesFramework;
 };
@@ -391,8 +401,6 @@ const ESGReportForm = () => {
   const companyInfoReady = hasSectorSelection || hasFrameworkSelection;
 
   const filteredQuestions = useMemo(() => {
-    if (!companyInfoReady) return [];
-
     const search = questionSearch.trim().toLowerCase();
     return questions.filter((q) => {
       const matchesCompanyInfo = questionMatchesCompanyInfo(
@@ -407,7 +415,7 @@ const ESGReportForm = () => {
         .toLowerCase()
         .includes(search);
     });
-  }, [questions, questionSearch, formData.industry, selectedFrameworks, companyInfoReady]);
+  }, [questions, questionSearch, formData.industry, selectedFrameworks]);
 
   const sectionRefs = useRef({
     company: null,
@@ -903,7 +911,7 @@ const ESGReportForm = () => {
                 .
               </>
             ) : (
-              ' Select an industry sector and/or at least one reporting framework to view questions.'
+              ' Universal questions are shown below. Select an industry sector and/or reporting framework to see more.'
             )}
           </p>
 
@@ -916,7 +924,7 @@ const ESGReportForm = () => {
                 value={questionSearch}
                 onChange={(e) => setQuestionSearch(e.target.value)}
                 placeholder="Search by question text..."
-                disabled={!companyInfoReady}
+                disabled={questionsLoading || !!questionsError}
               />
             </div>
           </div>
@@ -925,11 +933,6 @@ const ESGReportForm = () => {
             <p className="questions-status">Loading questions...</p>
           ) : questionsError ? (
             <p className="questions-status questions-status-error">{questionsError}</p>
-          ) : !companyInfoReady ? (
-            <p className="questions-status">
-              Select an industry sector and/or ESG reporting framework in Company Information to load
-              relevant questions.
-            </p>
           ) : (
             <>
               <p className="questions-count">
@@ -948,7 +951,9 @@ const ESGReportForm = () => {
                     {filteredQuestions.length === 0 ? (
                       <tr>
                         <td className="questions-empty">
-                          No questions match your selected sector and frameworks.
+                          {companyInfoReady
+                            ? 'No questions match your selected sector and frameworks.'
+                            : 'Select an industry sector and/or ESG reporting framework to load relevant questions.'}
                         </td>
                       </tr>
                     ) : (
