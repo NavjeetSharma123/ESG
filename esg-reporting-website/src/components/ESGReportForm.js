@@ -946,7 +946,9 @@ const ESGReportForm = () => {
                         <tr key={q.id}>
                           <td>
                             <div className="question-item">
-                              <p className="question-text">{q.question}</p>
+                              <p className="question-text">{q.question} <span class="tooltip">🛈
+                                <span class="tooltiptext">{q.guidelines}</span>
+                              </span></p>
                               <div className="question-answer">{renderQuestionInput(q)}</div>
                             </div>
                           </td>
