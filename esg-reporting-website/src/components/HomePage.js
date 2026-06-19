@@ -28,9 +28,10 @@ const HomePage = () => {
             <div className="home-hero__content">
               <p className="home-hero__eyebrow">Sustainability reporting platform</p>
               <h1 id="hero-heading" className="home-hero__title">
-                ESG disclosure, from data to audit-ready reports
+                Make Your Business ESG Ready
               </h1>
               <p className="home-hero__description">
+              <b>ESG disclosure, from data to audit-ready reports<br/></b>
                 Collect framework-aligned responses, track emissions, and generate structured
                 reports for GRI, SASB, TCFD, and BRSR — without rebuilding your process each year.
               </p>
@@ -128,7 +129,7 @@ const HomePage = () => {
       </section>
 
       {/* Services */}
-      <section className="home-section home-section--muted" aria-labelledby="services-heading">
+      {/* <section className="home-section home-section--muted" aria-labelledby="services-heading">
         <Container>
           <SectionHeader
             eyebrow="Capabilities"
@@ -165,10 +166,10 @@ const HomePage = () => {
             );
           })}
         </Container>
-      </section>
+      </section> */}
 
       {/* CTA */}
-      <section className="home-cta" aria-labelledby="cta-heading">
+      {/* <section className="home-cta" aria-labelledby="cta-heading">
         <Container>
           <div className="home-cta__inner">
             <div className="home-cta__content">
@@ -187,7 +188,7 @@ const HomePage = () => {
             </div>
           </div>
         </Container>
-      </section>
+      </section> */}
 
       <Modal
         isOpen={showDemoModal}

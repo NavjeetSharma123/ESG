@@ -1,5 +1,5 @@
 .esg-report-form-page {
-  max-width: 900px;
+  max-width: 1000px;
   margin: 0 auto;
   padding: var(--space-8) var(--space-6) var(--space-16);
 }
@@ -7,7 +7,28 @@
 .esg-form-header {
   margin-bottom: var(--space-8);
 }
+.tooltip {
+  position: relative;
+  display: inline-block;
+  border-bottom: 1px dotted black;
+  cursor: pointer;
+}
 
+.tooltiptext {
+  visibility: hidden;
+  width: 250px;
+  background-color: black;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px 0;
+  position: absolute;
+  z-index: 1;
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+}
 .esg-form-header h1 {
   font-size: var(--text-3xl);
   font-weight: var(--font-semibold);
