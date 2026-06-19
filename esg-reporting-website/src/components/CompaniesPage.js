@@ -1,5 +1,6 @@
 import React from 'react';
 import { useHistory } from 'react-router-dom';
+import Container from './ui/Container';
 import './CompaniesPage.css';
 
 const companies = [
@@ -53,42 +54,52 @@ const CompaniesPage = () => {
 
   return (
     <div className="companies-page">
-      <header className="companies-header">
-        <h1>Companies Using Our ESG Reporting Services</h1>
-        <p>
-          A snapshot of organisations that rely on our platform for ESG, BRSR, and sustainability reporting.
-        </p>
+      <header className="ds-page-header">
+        <Container>
+          <h1 className="ds-page-header__title">Client companies</h1>
+          <p className="ds-page-header__description">
+            Organizations using our platform for ESG, BRSR, and sustainability reporting.
+            Select a company to pre-fill the report builder.
+          </p>
+        </Container>
       </header>
 
-      <section className="companies-list-section">
-        <div className="companies-list-card">
-          <div className="companies-list-header">
-            <span>Company</span>
-            <span>Sector</span>
-            <span>Location</span>
-            <span>Services Used</span>
-            <span>Client Since</span>
-          </div>
-          {companies.map((company) => (
-            <div className="companies-list-row" key={company.name}>
-              <button
-                type="button"
-                className="companies-name-button"
-                onClick={() => handleCompanyClick(company)}
-              >
-                {company.name}
-              </button>
-              <span>{company.sector}</span>
-              <span>{company.location}</span>
-              <span>{company.services}</span>
-              <span>{company.since}</span>
-            </div>
-          ))}
+      <Container className="companies-page__body">
+        <div className="ds-table-wrap">
+          <table className="ds-table companies-table">
+            <thead>
+              <tr>
+                <th scope="col">Company</th>
+                <th scope="col">Sector</th>
+                <th scope="col">Location</th>
+                <th scope="col">Services</th>
+                <th scope="col">Since</th>
+              </tr>
+            </thead>
+            <tbody>
+              {companies.map((company) => (
+                <tr key={company.name}>
+                  <td>
+                    <button
+                      type="button"
+                      className="companies-table__link"
+                      onClick={() => handleCompanyClick(company)}
+                    >
+                      {company.name}
+                    </button>
+                  </td>
+                  <td>{company.sector}</td>
+                  <td>{company.location}</td>
+                  <td>{company.services}</td>
+                  <td>{company.since}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      </section>
+      </Container>
     </div>
   );
 };
 
 export default CompaniesPage;
-

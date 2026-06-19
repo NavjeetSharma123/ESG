@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import Button from './ui/Button';
+import Container from './ui/Container';
 import './DemoForm.css';
 
 const DemoForm = ({ onClose }) => {
@@ -74,11 +76,11 @@ const DemoForm = ({ onClose }) => {
     'Compliance Reports',
   ];
 
-  return (
-    <div className="demo-form">
-      <h2>Request a Demo</h2>
-      <p className="demo-form-intro">
-        Tell us about yourself and we&apos;ll show you how we can help your business become more sustainable.
+  const formContent = (
+    <>
+      <h2 id="demo-form-title" className="demo-form__title">Request a demo</h2>
+      <p className="demo-form__intro">
+        Tell us about your organization and reporting requirements. We&apos;ll follow up within one business day.
       </p>
       <form onSubmit={handleSubmit}>
         <section className="form-section">
@@ -300,24 +302,40 @@ const DemoForm = ({ onClose }) => {
         </section>
 
         <div className="form-actions">
-          <button type="submit" className="btn btn-primary">
-            Submit Request
-          </button>
+          <Button type="submit" variant="primary">
+            Submit request
+          </Button>
           {onClose ? (
-            <button
-              type="button"
-              className="btn btn-outline"
-              onClick={onClose}
-            >
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
-            </button>
+            </Button>
           ) : (
-            <Link to="/" className="btn btn-outline">
-              Back to Home
-            </Link>
+            <Button as={Link} to="/" variant="secondary">
+              Back to home
+            </Button>
           )}
         </div>
       </form>
+    </>
+  );
+
+  if (onClose) {
+    return <div className="demo-form demo-form--modal">{formContent}</div>;
+  }
+
+  return (
+    <div className="demo-form-page">
+      <header className="ds-page-header">
+        <Container>
+          <h1 className="ds-page-header__title">Contact us</h1>
+          <p className="ds-page-header__description">
+            Schedule a walkthrough of the platform or discuss enterprise requirements.
+          </p>
+        </Container>
+      </header>
+      <Container className="demo-form-page__body">
+        <div className="demo-form demo-form--page">{formContent}</div>
+      </Container>
     </div>
   );
 };

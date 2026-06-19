@@ -28,18 +28,20 @@ function App() {
       <div className="App">
         <ScrollToTopOnRouteChange />
         <Header />
-        <Switch>
-          <Route path="/" exact component={HomePage} />
-          <Route path="/services" component={Services} />
-          <Route path="/companies" component={CompaniesPage} />
-          <Route path="/demo" component={DemoForm} />
-          <Route path="/esg-report" component={ESGReportForm} />
-          <Route path="/gri-details" component={GRIDetailsForm} />
-          <Route path="/brsr" component={BRSRPage} />
-          <Route path="/msci-readiness" component={MSCIReadiness} />
-          <Route path="/final-report" component={FinalReportPage} />
-          <Route path="/esg-report-result" component={ESGReportResult} />
-        </Switch>
+        <main className="app-main" id="main-content">
+          <Switch>
+            <Route path="/" exact component={HomePage} />
+            <Route path="/services" component={Services} />
+            <Route path="/companies" component={CompaniesPage} />
+            <Route path="/demo" component={DemoForm} />
+            <Route path="/esg-report" component={ESGReportForm} />
+            <Route path="/gri-details" component={GRIDetailsForm} />
+            <Route path="/brsr" component={BRSRPage} />
+            <Route path="/msci-readiness" component={MSCIReadiness} />
+            <Route path="/final-report" component={FinalReportPage} />
+            <Route path="/esg-report-result" component={ESGReportResult} />
+          </Switch>
+        </main>
         <Footer />
       </div>
     </Router>

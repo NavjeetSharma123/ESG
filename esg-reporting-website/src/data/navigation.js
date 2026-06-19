@@ -1,0 +1,19 @@
+export const mainNav = [
+  { label: 'Services', path: '/services' },
+  { label: 'Clients', path: '/companies' },
+  { label: 'Report builder', path: '/esg-report' },
+];
+
+export const footerNav = {
+  product: [
+    { label: 'ESG Report Builder', path: '/esg-report' },
+    { label: 'BRSR', path: '/brsr' },
+    { label: 'GRI Details', path: '/gri-details' },
+    { label: 'MSCI Readiness', path: '/msci-readiness' },
+  ],
+  company: [
+    { label: 'Services', path: '/services' },
+    { label: 'Client companies', path: '/companies' },
+    { label: 'Request a demo', path: '/demo' },
+  ],
+};
