@@ -255,7 +255,7 @@
 }
 
 .questions-table-wrap {
-  overflow-x: auto;
+  overflow: hidden;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
 }

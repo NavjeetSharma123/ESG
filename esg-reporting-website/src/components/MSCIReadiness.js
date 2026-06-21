@@ -336,13 +336,13 @@ export default function MSCIReadiness() {
       <div className="msci-shell">
         <div className="msci-header">
           <div className="msci-title-row">
-            <h1 className="msci-title">MSCI readiness score</h1>
+            <h1 className="msci-title">Readiness score</h1>
             <div className="msci-badge msci-badge--neutral">
               Projected Grade: <strong>{computed.grade}</strong>
             </div>
           </div>
           <p className="msci-subtitle">
-            Diagnostic self-assessment to estimate a company’s MSCI ESG Rating (AAA to CCC) on a 0–10 scale.
+            Diagnostic self-assessment to estimate a company’s  ESG Rating (AAA to CCC) on a 0–10 scale.
           </p>
 
           <div className="msci-progress-card">
@@ -563,10 +563,9 @@ export default function MSCIReadiness() {
             <div className="msci-disclaimer">
               <div className="msci-disclaimer-title">Disclaimer</div>
               <p>
-                Disclaimer: This MSCI Readiness Score is a self-assessment tool based on publicly available MSCI ESG
-                Ratings methodologies as of March 2026. This is NOT an official MSCI Rating. The actual rating awarded
-                by MSCI Inc. may differ significantly based on their proprietary data, controversy monitoring, and
-                analyst assessments. Use this score for internal strategic planning only.
+                This Readiness Score is a proprietary self-assessment measure developed by our organization to help evaluate ESG readiness.
+                It is intended for informational purposes only and does not constitute an official ESG rating, ranking, or certification.
+
               </p>
             </div>
           </div>

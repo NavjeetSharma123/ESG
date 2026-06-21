@@ -37,7 +37,7 @@ function App() {
             <Route path="/esg-report" component={ESGReportForm} />
             <Route path="/gri-details" component={GRIDetailsForm} />
             <Route path="/brsr" component={BRSRPage} />
-            <Route path="/msci-readiness" component={MSCIReadiness} />
+            <Route path="/readiness" component={MSCIReadiness} />
             <Route path="/final-report" component={FinalReportPage} />
             <Route path="/esg-report-result" component={ESGReportResult} />
           </Switch>

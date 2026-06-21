@@ -9,7 +9,7 @@ export const footerNav = {
     { label: 'ESG Report Builder', path: '/esg-report' },
     { label: 'BRSR', path: '/brsr' },
     { label: 'GRI Details', path: '/gri-details' },
-    { label: 'MSCI Readiness', path: '/msci-readiness' },
+    { label: 'Readiness Score', path: '/readiness' },
   ],
   company: [
     { label: 'Services', path: '/services' },
