@@ -22,6 +22,7 @@ const ALL_FRAMEWORKS = [
   'BRSR',
 ];
 
+
 const getFrameworksForCountry = (country) => {
   if (!country) return [];
   return COUNTRY_FRAMEWORKS[country] || COUNTRY_FRAMEWORKS.Other;
@@ -427,7 +428,55 @@ const ESGReportForm = () => {
     });
   }, [questions, questionSearch, formData.industry, selectedFrameworks]);
 
+
+  const ALL_DEPT = [
+    'Corporate Governance',
+    'Corporate Affairs',
+    'Corporate Social Responsibility',
+    'Corporate Reporting',
+    'Environment & Sustainability',
+    'Finance',
+    'Human Resources',
+    'IT & Technology',
+    'Strategy & Risk',
+    'Sales & Marketing',
+    'Supply Chain & Procurement',
+    'Legal & Compliance'
+  ];
+
   const sectionRefs = useRef({
+    CorporateGovernance : null,
+    CorporateAffairs : null,
+    CorporateSocialResponsibility : null,
+    CorporateReporting : null,
+    EnvironmentSustainability : null,
+    Finance : null,
+    HumanResources : null,
+    ITTechnology : null,
+    StrategyRisk : null,
+    SalesMarketing : null,
+    SupplyChainProcurement : null,
+    LegalCompliance : null
+  });
+  const sections = useMemo(
+    () => [
+      {id: 'CorporateGovernance', label: 'Corporate Governance'},
+      { id: 'CorporateAffairs', label: 'Corporate Affairs' },
+      { id: 'CorporateSocialResponsibility', label: 'Corporate Social Responsibility' },
+      { id: 'CorporateReporting', label: 'Corporate Reporting' },
+      { id: 'EnvironmentSustainability', label: 'Environment Sustainability' },
+      { id: 'Finance', label: 'Finance' },
+      { id: 'HumanResources', label: 'Human Resources' },
+      { id: 'ITTechnology', label: 'IT Technology' },
+      { id: 'StrategyRisk', label: 'Strategy Risk' },
+      { id: 'SalesMarketing', label: 'Sales Marketing' },
+      { id: 'SupplyChainProcurement', label: 'Supply Chain Procurement' },
+      { id: 'LegalCompliance', label: 'Legal Compliance' },
+    ],
+    []
+  );
+  
+/*  const sectionRefs = useRef({
     company: null,
     common: null,
     gri: null,
@@ -447,7 +496,7 @@ const ESGReportForm = () => {
       { id: 'governance', label: 'Governance' },
     ],
     []
-  );
+  ); */
   const visibleSections = useMemo(() => {
     return sections.filter((s) => {
       if (s.id === 'cdp') return hasFramework('CDP');
@@ -740,6 +789,21 @@ const ESGReportForm = () => {
         </p>
         <div className="esg-progress" aria-label="Form progress">
           <div className="esg-progress-top">
+            <div className="esg-progress-steps">
+              {visibleSections.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  className={`esg-progress-step ${activeSectionId === s.id ? 'is-active' : ''}`}
+                  onClick={() => {
+                    const el = sectionRefs.current[s.id];
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
             <div className="esg-progress-pct">{progressPct}%</div>
           </div>
           <div className="esg-progress-track" aria-hidden="true">
