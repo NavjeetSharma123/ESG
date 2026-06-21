@@ -217,14 +217,9 @@ const FinalReportPage = () => {
   const ALL_FRAMEWORKS_ORDER = [
     'BRSR',
     'GRI',
-    'ISSB / SASB',
+    'SASB',
     'TCFD',
-    'UN Global Compact',
-    'CDP',
-    'CSRD / ESRS',
-    'SFDR',
-    'UK SDR',
-    'US SEC Climate Disclosure',
+    'UNGC'
   ];
 
   const frameworksToShow = ALL_FRAMEWORKS_ORDER;

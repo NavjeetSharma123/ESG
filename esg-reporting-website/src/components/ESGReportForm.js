@@ -107,7 +107,17 @@ const ESGReportForm = () => {
         />
       );
     }
-
+    if (type === 'date') {
+      return (
+        <input
+          type="date"
+          className="question-answer-input"
+          value={value ?? ''}
+          onChange={(e) => handleQuestionAnswer(q.id, e.target.value)}
+          placeholder="Enter a date"
+        />
+      );
+    }
     if (type === 'text') {
       return (
         <textarea
