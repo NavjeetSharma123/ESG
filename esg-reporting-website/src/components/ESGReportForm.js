@@ -498,12 +498,17 @@ const ESGReportForm = () => {
     []
   ); */
   const visibleSections = useMemo(() => {
-    return sections.filter((s) => {
-      if (s.id === 'cdp') return hasFramework('CDP');
-      if (s.id === 'gri') return hasFramework('GRI');
-      return true;
-    });
-  }, [hasFramework, sections]);
+    const departments = [...new Set(
+      filteredQuestions
+        .map(q => q.department)
+        .filter(Boolean)
+    )];
+  
+    return departments.map(dep => ({
+      id: dep.replace(/\s+/g, ''),
+      label: dep
+    }));
+  }, [filteredQuestions]);
   const [activeSectionId, setActiveSectionId] = useState('company');
   const progressFieldKeys = useMemo(() => {
     const keys = [
