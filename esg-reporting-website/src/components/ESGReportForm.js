@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import './ESGReportForm.css';
 
@@ -75,6 +75,7 @@ const ESGReportForm = () => {
   const [questionsError, setQuestionsError] = useState('');
   const [questionSearch, setQuestionSearch] = useState('');
   const [questionAnswers, setQuestionAnswers] = useState({});
+  const [selectedDepartments, setSelectedDepartments] = useState([]);
 
   const handleQuestionAnswer = (id, value) => {
     setQuestionAnswers((prev) => ({ ...prev, [id]: value }));
@@ -411,6 +412,20 @@ const ESGReportForm = () => {
   const hasFrameworkSelection = selectedFrameworks.length > 0;
   const companyInfoReady = hasSectorSelection || hasFrameworkSelection;
 
+  const availableDepartments = useMemo(() => {
+    const departments = [...new Set(
+      questions
+        .filter((q) => questionMatchesCompanyInfo(q, formData.industry, selectedFrameworks))
+        .map((q) => q.department)
+        .filter(Boolean)
+    )];
+    return departments.sort((a, b) => a.localeCompare(b));
+  }, [questions, formData.industry, selectedFrameworks]);
+
+  useEffect(() => {
+    setSelectedDepartments((prev) => prev.filter((dep) => availableDepartments.includes(dep)));
+  }, [availableDepartments]);
+
   const filteredQuestions = useMemo(() => {
     const search = questionSearch.trim().toLowerCase();
     return questions.filter((q) => {
@@ -420,96 +435,37 @@ const ESGReportForm = () => {
         selectedFrameworks
       );
       if (!matchesCompanyInfo) return false;
+      if (
+        selectedDepartments.length > 0
+        && (!q.department || !selectedDepartments.includes(q.department))
+      ) {
+        return false;
+      }
 
       if (!search) return true;
       return String(q.question || '')
         .toLowerCase()
         .includes(search);
     });
-  }, [questions, questionSearch, formData.industry, selectedFrameworks]);
+  }, [questions, questionSearch, formData.industry, selectedFrameworks, selectedDepartments]);
 
-
-  const ALL_DEPT = [
-    'Corporate Governance',
-    'Corporate Affairs',
-    'Corporate Social Responsibility',
-    'Corporate Reporting',
-    'Environment & Sustainability',
-    'Finance',
-    'Human Resources',
-    'IT & Technology',
-    'Strategy & Risk',
-    'Sales & Marketing',
-    'Supply Chain & Procurement',
-    'Legal & Compliance'
-  ];
-
-  const sectionRefs = useRef({
-    CorporateGovernance : null,
-    CorporateAffairs : null,
-    CorporateSocialResponsibility : null,
-    CorporateReporting : null,
-    EnvironmentSustainability : null,
-    Finance : null,
-    HumanResources : null,
-    ITTechnology : null,
-    StrategyRisk : null,
-    SalesMarketing : null,
-    SupplyChainProcurement : null,
-    LegalCompliance : null
-  });
-  const sections = useMemo(
-    () => [
-      {id: 'CorporateGovernance', label: 'Corporate Governance'},
-      { id: 'CorporateAffairs', label: 'Corporate Affairs' },
-      { id: 'CorporateSocialResponsibility', label: 'Corporate Social Responsibility' },
-      { id: 'CorporateReporting', label: 'Corporate Reporting' },
-      { id: 'EnvironmentSustainability', label: 'Environment Sustainability' },
-      { id: 'Finance', label: 'Finance' },
-      { id: 'HumanResources', label: 'Human Resources' },
-      { id: 'ITTechnology', label: 'IT Technology' },
-      { id: 'StrategyRisk', label: 'Strategy Risk' },
-      { id: 'SalesMarketing', label: 'Sales Marketing' },
-      { id: 'SupplyChainProcurement', label: 'Supply Chain Procurement' },
-      { id: 'LegalCompliance', label: 'Legal Compliance' },
-    ],
-    []
-  );
-  
-/*  const sectionRefs = useRef({
-    company: null,
-    common: null,
-    gri: null,
-    environmental: null,
-    cdp: null,
-    social: null,
-    governance: null,
-  });
-  const sections = useMemo(
-    () => [
-      { id: 'company', label: 'Company' },
-      { id: 'common', label: 'Common' },
-      { id: 'gri', label: 'GRI' },
-      { id: 'environmental', label: 'Environmental' },
-      { id: 'cdp', label: 'CDP' },
-      { id: 'social', label: 'Social' },
-      { id: 'governance', label: 'Governance' },
-    ],
-    []
-  ); */
-  const visibleSections = useMemo(() => {
+  const displayDepartments = useMemo(() => {
+    if (selectedDepartments.length > 0) {
+      return selectedDepartments.slice().sort((a, b) => a.localeCompare(b));
+    }
     const departments = [...new Set(
-      filteredQuestions
-        .map(q => q.department)
-        .filter(Boolean)
+      filteredQuestions.map((q) => q.department).filter(Boolean)
     )];
-  
-    return departments.map(dep => ({
-      id: dep.replace(/\s+/g, ''),
-      label: dep
-    }));
-  }, [filteredQuestions]);
-  const [activeSectionId, setActiveSectionId] = useState('company');
+    return departments.sort((a, b) => a.localeCompare(b));
+  }, [selectedDepartments, filteredQuestions]);
+
+  const handleDepartmentToggle = (department) => {
+    setSelectedDepartments((prev) => (
+      prev.includes(department)
+        ? prev.filter((dep) => dep !== department)
+        : [...prev, department]
+    ));
+  };
   const progressFieldKeys = useMemo(() => {
     const keys = [
       'companyName',
@@ -731,29 +687,6 @@ const ESGReportForm = () => {
     return Math.round((completed / total) * 100);
   }, [formData, progressFieldKeys]);
 
-  useEffect(() => {
-    const els = visibleSections
-      .map((s) => sectionRefs.current[s.id])
-      .filter(Boolean);
-    if (els.length === 0) return;
-
-    const obs = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => (b.intersectionRatio || 0) - (a.intersectionRatio || 0));
-        if (visible[0] && visible[0].target && visible[0].target.id) {
-          const id = visible[0].target.id.replace('esg-section-', '');
-          setActiveSectionId(id);
-        }
-      },
-      { root: null, threshold: [0.15, 0.25, 0.35, 0.5] }
-    );
-
-    els.forEach((el) => obs.observe(el));
-    return () => obs.disconnect();
-  }, [visibleSections]);
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => {
@@ -792,25 +725,40 @@ const ESGReportForm = () => {
         <p>
           Complete the form below with your organization&apos;s data. Fields align with GRI, SASB, and TCFD frameworks.
         </p>
-        <div className="esg-progress" aria-label="Form progress">
+        <div className="esg-progress esg-department-bar" aria-label="Department filter">
           <div className="esg-progress-top">
-            <div className="esg-progress-steps">
-              {visibleSections.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  className={`esg-progress-step ${activeSectionId === s.id ? 'is-active' : ''}`}
-                  onClick={() => {
-                    const el = sectionRefs.current[s.id];
-                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }}
-                >
-                  {s.label}
-                </button>
-              ))}
+            <div className="esg-department-bar-heading">
+              <span className="esg-department-bar-label">Departments</span>
+              {companyInfoReady && availableDepartments.length > 0 ? (
+                <span className="esg-department-bar-hint">Optional: select departments to narrow questions</span>
+              ) : null}
             </div>
             <div className="esg-progress-pct">{progressPct}%</div>
           </div>
+          {companyInfoReady && availableDepartments.length > 0 ? (
+            <div className="esg-progress-steps" role="group" aria-label="Select departments">
+              {availableDepartments.map((dep) => {
+                const isSelected = selectedDepartments.includes(dep);
+                return (
+                  <button
+                    key={dep}
+                    type="button"
+                    className={`esg-progress-step ${isSelected ? 'is-selected' : ''}`}
+                    aria-pressed={isSelected}
+                    onClick={() => handleDepartmentToggle(dep)}
+                  >
+                    {dep}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="esg-department-bar-empty">
+              {companyInfoReady
+                ? 'No departments match your sector and framework selections.'
+                : 'Select an industry sector and/or reporting framework to choose departments.'}
+            </p>
+          )}
           <div className="esg-progress-track" aria-hidden="true">
             <div className="esg-progress-fill" style={{ width: `${progressPct}%` }} />
           </div>
@@ -818,13 +766,7 @@ const ESGReportForm = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="esg-form">
-        <section
-          id="esg-section-company"
-          ref={(el) => {
-            sectionRefs.current.company = el;
-          }}
-          className="form-section"
-        >
+        <section id="esg-section-company" className="form-section">
           <h2>Company Information</h2>
           <div className="form-grid">
             <div className="form-group full">
@@ -1000,9 +942,20 @@ const ESGReportForm = () => {
           ) : (
             <>
               <p className="questions-count">
-                Showing {filteredQuestions.length} question{filteredQuestions.length === 1 ? '' : 's'}
-                {hasSectorSelection && ` for ${selectedSector}`}
-                {hasFrameworkSelection && ` (${selectedFrameworks.join(', ')})`}
+                {filteredQuestions.length === 0 ? (
+                  companyInfoReady
+                    ? 'No questions match your sector and framework selections.'
+                    : 'No questions to display yet.'
+                ) : (
+                  <>
+                    Showing {filteredQuestions.length} question{filteredQuestions.length === 1 ? '' : 's'}
+                    {selectedDepartments.length > 0
+                      ? ` from ${selectedDepartments.length} department${selectedDepartments.length === 1 ? '' : 's'}`
+                      : ' across all departments'}
+                    {hasSectorSelection && ` for ${selectedSector}`}
+                    {hasFrameworkSelection && ` (${selectedFrameworks.join(', ')})`}
+                  </>
+                )}
               </p>
               <div className="questions-table-wrap">
                 <table className="questions-table">
@@ -1015,24 +968,35 @@ const ESGReportForm = () => {
                     {filteredQuestions.length === 0 ? (
                       <tr>
                         <td className="questions-empty">
-                          {companyInfoReady
-                            ? 'No questions match your selected sector and frameworks.'
-                            : 'Select an industry sector and/or ESG reporting framework to load relevant questions.'}
+                          {!companyInfoReady
+                            ? 'Select an industry sector and/or ESG reporting framework to load relevant questions.'
+                            : 'No questions match your current sector and framework filters.'}
                         </td>
                       </tr>
                     ) : (
-                      filteredQuestions.map((q) => (
-                        <tr key={q.id}>
-                          <td>
-                            <div className="question-item">
-                              <p className="question-text">{q.question} <span class="tooltip">🛈
-                                <span class="tooltiptext">{q.guidelines}</span>
-                              </span></p>
-                              <div className="question-answer">{renderQuestionInput(q)}</div>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
+                      displayDepartments.map((dep) => {
+                        const deptQuestions = filteredQuestions.filter((q) => q.department === dep);
+                        if (deptQuestions.length === 0) return null;
+                        return (
+                          <React.Fragment key={dep}>
+                            <tr className="questions-dept-header">
+                              <td>{dep}</td>
+                            </tr>
+                            {deptQuestions.map((q) => (
+                              <tr key={q.id}>
+                                <td>
+                                  <div className="question-item">
+                                    <p className="question-text">{q.question} <span class="tooltip">🛈
+                                      <span class="tooltiptext">{q.guidelines}</span>
+                                    </span></p>
+                                    <div className="question-answer">{renderQuestionInput(q)}</div>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </React.Fragment>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
