@@ -17,15 +17,10 @@ const COUNTRY_FRAMEWORKS = {
 
 const ALL_FRAMEWORKS = [
   'GRI',
-  'ISSB / SASB',
+  'SASB',
   'TCFD',
-  'UN Global Compact',
-  'CDP',
-  'CSRD / ESRS',
-  'SFDR',
-  'UK SDR',
-  'US SEC Climate Disclosure',
-  'BRSR',
+  'UNGC',
+  'BRSR'
 ];
 
 const getFrameworksForCountry = (country) => {

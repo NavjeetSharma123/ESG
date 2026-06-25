@@ -41,6 +41,14 @@ const normalizeIndustrySector = (industry) => {
 
 const isUniversalQuestion = (question) => !question.sector && !question.framework;
 
+const questionMatchesAnyFramework = (questionFramework, selectedFrameworks) => {
+  if (!selectedFrameworks.length || !questionFramework) return true;
+  const normalizedQuestionFramework = String(questionFramework).toLowerCase();
+  return selectedFrameworks.some((framework) =>
+    normalizedQuestionFramework.includes(String(framework).toLowerCase())
+  );
+};
+
 const questionMatchesCompanyInfo = (question, industry, frameworks) => {
   if (isUniversalQuestion(question)) return true;
 
@@ -59,7 +67,7 @@ const questionMatchesCompanyInfo = (question, industry, frameworks) => {
   const matchesFramework =
     !hasFrameworks
     || !question.framework
-    || frameworks.includes(question.framework);
+    || questionMatchesAnyFramework(question.framework, frameworks);
 
   return matchesSector && matchesFramework;
 };
@@ -404,7 +412,7 @@ const ESGReportForm = () => {
       esgFrameworks: frameworks,
     };
   });
-  const hasFramework = (fw) => Array.isArray(formData.esgFrameworks) && formData.esgFrameworks.includes(fw);
+  const hasFramework = (fw) => Array.isArray(formData.esgFrameworks) && formData.esgFrameworks.some((f) => f.includes(fw)); // check substring match
   const noFrameworkSelected = !Array.isArray(formData.esgFrameworks) || formData.esgFrameworks.length === 0;
   const selectedSector = normalizeIndustrySector(formData.industry);
   const selectedFrameworks = Array.isArray(formData.esgFrameworks) ? formData.esgFrameworks : [];
@@ -714,7 +722,11 @@ const ESGReportForm = () => {
 
     history.push({
       pathname: '/final-report',
-      state: { source: 'ESG', esgData: formData },
+      state: {
+        source: 'ESG',
+        esgData: formData,
+        visibleQuestions: filteredQuestions,
+      },
     });
   };
 
@@ -980,7 +992,7 @@ const ESGReportForm = () => {
                         return (
                           <React.Fragment key={dep}>
                             <tr className="questions-dept-header">
-                              <td>{dep}</td>
+                            { /* <td>{dep}</td> */ }
                             </tr>
                             {deptQuestions.map((q) => (
                               <tr key={q.id}>

@@ -1,13 +1,14 @@
 import React from 'react';
 import { useLocation, useHistory } from 'react-router-dom';
-import { generateBRSRReportHTML, generateBRSRReportPDF, generateBRSRReportPDFFromTemplate } from '../utils/reportGenerator';
+import { jsPDF } from 'jspdf';
+import { generateBRSRReportHTML, generateBRSRReportPDFFromTemplate, generateESGReportPDF } from '../utils/reportGenerator';
 import './FinalReportPage.css';
 
 const FinalReportPage = () => {
   const location = useLocation();
   const history = useHistory();
   const state = location.state || {};
-  const { source, brsrData, esgData, griData } = state;
+  const { source, brsrData, esgData, griData, visibleQuestions } = state;
 
   const activeData = brsrData || esgData || griData;
 
@@ -87,25 +88,205 @@ const FinalReportPage = () => {
 
   const isCompliant = source === 'BRSR' ? completenessRatio >= 0.8 : completenessRatio >= 0.6;
 
-  const handleDownloadPDF = () => {
-    if (source === 'BRSR' && brsrData) {
-      (async () => {
-        try {
-          const pdfBlob = await generateBRSRReportPDFFromTemplate(brsrData);
-          const url = URL.createObjectURL(pdfBlob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `${brsrData.companyName || 'BRSR'}-SEBI-BRSR-Annexure-Report.pdf`;
-          link.click();
-          URL.revokeObjectURL(url);
-        } catch (err) {
-          // eslint-disable-next-line no-console
-          console.error('Failed to generate BRSR template PDF:', err);
-          alert('Failed to generate the template-based BRSR PDF. Please try again.');
+  const safeFileName = (name) => String(name || 'ESG-Report')
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, '-')
+    .replace(/\s+/g, '-');
+
+  const getDownloadData = () => {
+    if (source === 'ESG' && esgData) {
+      return esgData;
+    }
+
+    if (source === 'GRI' && griData) {
+      return {
+        ...(griData.baseFormData || {}),
+        ...(griData.griUniversal || {}),
+        ...(griData.griEconomic || {}),
+        ...(griData.griEnvironmental || {}),
+        ...(griData.griSocial || {}),
+        companyName,
+        esgFrameworks: ['GRI'],
+        scope1Emissions:
+          (griData.griEnvironmental && griData.griEnvironmental.ghgEmissionsOverview) || '',
+        revenue:
+          (griData.griEconomic && griData.griEconomic.revenueAndProfits) || '',
+        totalEmployees:
+          (griData.griUniversal && griData.griUniversal.numberOfEmployees) ||
+          (griData.griSocial && griData.griSocial.totalWorkforce) ||
+          '',
+        genderDiversityPercent:
+          (griData.griSocial && griData.griSocial.genderDiversityRatios) || '',
+        communityInvestment:
+          (griData.griSocial && griData.griSocial.csrInvestments) || '',
+      };
+    }
+
+    return activeData;
+  };
+
+  const getQuestionFrameworks = (question, selectedFrameworks) => {
+    const questionFramework = String(question.framework || '').toLowerCase();
+    if (!questionFramework) return selectedFrameworks.length ? selectedFrameworks : ['General'];
+
+    const matched = selectedFrameworks.filter((framework) =>
+      questionFramework.includes(String(framework).toLowerCase())
+    );
+
+    if (matched.length) return matched;
+    return [question.framework];
+  };
+
+  const addQuestionnaireFooters = (doc) => {
+    const pageCount = doc.internal.getNumberOfPages();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+      doc.setPage(pageNumber);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(90, 90, 90);
+      doc.text(`Page ${pageNumber} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+    }
+  };
+
+  const downloadVisibleQuestionsPDF = () => {
+    const currentVisibleQuestions = Array.isArray(visibleQuestions) ? visibleQuestions : [];
+    if (currentVisibleQuestions.length === 0) {
+      alert('No questions available for the selected filters.');
+      return;
+    }
+
+    const selectedFrameworks = Array.isArray(esgData && esgData.esgFrameworks)
+      ? esgData.esgFrameworks
+      : [];
+    const grouped = [];
+    const groupedByFramework = {};
+
+    currentVisibleQuestions.forEach((question) => {
+      getQuestionFrameworks(question, selectedFrameworks).forEach((framework) => {
+        if (!groupedByFramework[framework]) {
+          groupedByFramework[framework] = [];
+          grouped.push(framework);
         }
-      })();
-    } else {
-      alert('PDF download is currently available for BRSR reports. ESG/GRI PDFs can be added next.');
+        groupedByFramework[framework].push(question);
+      });
+    });
+
+    const includedFrameworks = grouped.join(', ');
+    const totalQuestions = grouped.reduce(
+      (count, framework) => count + groupedByFramework[framework].length,
+      0
+    );
+    const today = new Date().toISOString().slice(0, 10);
+    const doc = new jsPDF();
+    const marginLeft = 18;
+    const marginRight = 18;
+    const marginTop = 20;
+    const marginBottom = 20;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const usableWidth = pageWidth - marginLeft - marginRight;
+    let y = marginTop;
+
+    doc.setProperties({
+      title: 'ESG Questionnaire',
+      author: 'ESG Sustainability Platform',
+      subject: 'Visible ESG Questions',
+      creator: 'ESG Sustainability Platform',
+    });
+
+    const ensureSpace = (heightNeeded) => {
+      if (y + heightNeeded <= pageHeight - marginBottom) return;
+      doc.addPage();
+      y = marginTop;
+    };
+
+    const addWrappedText = (text, fontSize, fontStyle, gapAfter = 5) => {
+      doc.setFont('helvetica', fontStyle);
+      doc.setFontSize(fontSize);
+      doc.setTextColor(20, 20, 20);
+      const lines = doc.splitTextToSize(String(text || 'N/A'), usableWidth);
+      const lineHeight = fontSize * 0.45;
+      ensureSpace((lines.length * lineHeight) + gapAfter);
+      doc.text(lines, marginLeft, y);
+      y += (lines.length * lineHeight) + gapAfter;
+    };
+
+    addWrappedText('ESG Questionnaire', 18, 'bold', 8);
+    addWrappedText(`Generated on: ${today}`, 12, 'normal', 4);
+    addWrappedText(`Frameworks Included: ${includedFrameworks || 'General'}`, 12, 'normal', 4);
+    addWrappedText(`Total Questions: ${totalQuestions}`, 12, 'normal', 10);
+
+    grouped.forEach((framework) => {
+      ensureSpace(24);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(15);
+      doc.setTextColor(13, 59, 44);
+      doc.text(framework, marginLeft, y);
+      y += 7;
+      doc.setDrawColor(13, 59, 44);
+      doc.line(marginLeft, y, pageWidth - marginRight, y);
+      y += 8;
+
+      groupedByFramework[framework].forEach((question, index) => {
+        const questionLines = doc.splitTextToSize(String(question.question || 'N/A'), usableWidth);
+        const blockHeight = 8 + (questionLines.length * 5.4) + 8;
+        ensureSpace(blockHeight);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.setTextColor(20, 20, 20);
+        doc.text(`${index + 1}.`, marginLeft, y);
+        y += 7;
+        doc.setFont('helvetica', 'normal');
+        doc.text(questionLines, marginLeft, y);
+        y += (questionLines.length * 5.4) + 4;
+        doc.setDrawColor(210, 210, 210);
+        doc.line(marginLeft, y, pageWidth - marginRight, y);
+        y += 8;
+      });
+    });
+
+    addQuestionnaireFooters(doc);
+    doc.save(`ESG_Questions_${today}.pdf`);
+  };
+
+  const handleDownloadPDF = async () => {
+    if (source === 'ESG') {
+      downloadVisibleQuestionsPDF();
+      return;
+    }
+
+    if (source === 'BRSR' && brsrData) {
+      try {
+        const pdfBlob = await generateBRSRReportPDFFromTemplate(brsrData);
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${safeFileName(brsrData.companyName || 'BRSR')}-SEBI-BRSR-Annexure-Report.pdf`;
+        link.click();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to generate BRSR template PDF:', err);
+        alert('Failed to generate the template-based BRSR PDF. Please try again.');
+      }
+      return;
+    }
+
+    try {
+      const pdfBlob = generateESGReportPDF(getDownloadData());
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${safeFileName(companyName)}-${source || 'ESG'}-Report.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to generate report PDF:', err);
+      alert('Failed to generate the report PDF. Please try again.');
     }
   };
 
@@ -772,7 +953,7 @@ const FinalReportPage = () => {
             fontSize: '12px',
             height: '70px'}}
         >
-          Generate Official SEBI-Compliant BRSR
+          {source === 'BRSR' ? 'Generate Official SEBI-Compliant BRSR' : 'Download Report PDF'}
         </button>
       </section>
     </div>
