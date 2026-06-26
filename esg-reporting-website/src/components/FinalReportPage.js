@@ -218,6 +218,7 @@ const FinalReportPage = () => {
     addWrappedText(`Generated on: ${today}`, 12, 'normal', 4);
     addWrappedText(`Frameworks Included: ${includedFrameworks || 'General'}`, 12, 'normal', 4);
     addWrappedText(`Total Questions: ${totalQuestions}`, 12, 'normal', 10);
+    addWrappedText('* Answer was defaulted because no response was provided.', 10, 'italic', 10);
 
     grouped.forEach((framework) => {
       ensureSpace(24);
@@ -232,7 +233,9 @@ const FinalReportPage = () => {
 
       groupedByFramework[framework].forEach((question, index) => {
         const questionLines = doc.splitTextToSize(String(question.question || 'N/A'), usableWidth);
-        const blockHeight = 8 + (questionLines.length * 5.4) + 8;
+        const answerText = `Answer: ${question.answer || 'Not disclosed *'}`;
+        const answerLines = doc.splitTextToSize(answerText, usableWidth);
+        const blockHeight = 8 + (questionLines.length * 5.4) + 4 + (answerLines.length * 5.4) + 8;
         ensureSpace(blockHeight);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
@@ -242,6 +245,10 @@ const FinalReportPage = () => {
         doc.setFont('helvetica', 'normal');
         doc.text(questionLines, marginLeft, y);
         y += (questionLines.length * 5.4) + 4;
+        doc.setFont('helvetica', question.isDefaultAnswer ? 'italic' : 'bold');
+        doc.setTextColor(question.isDefaultAnswer ? 110 : 20, 20, 20);
+        doc.text(answerLines, marginLeft, y);
+        y += (answerLines.length * 5.4) + 4;
         doc.setDrawColor(210, 210, 210);
         doc.line(marginLeft, y, pageWidth - marginRight, y);
         y += 8;

@@ -72,6 +72,38 @@ const questionMatchesCompanyInfo = (question, industry, frameworks) => {
   return matchesSector && matchesFramework;
 };
 
+const DEFAULT_ANSWER_MARKER = ' *';
+
+const getDefaultQuestionAnswer = (question) => {
+  const type = String(question.questionType || '').toLowerCase();
+  if (type === 'yes/no') return 'No';
+  if (type === 'numeric') return '0';
+  if (type === 'date') return new Date().toISOString().slice(0, 10);
+  if (type === 'multiple choice') {
+    const options = Array.isArray(question.options) ? question.options.filter(Boolean) : [];
+    return options[0] || 'Not disclosed';
+  }
+  return 'Not disclosed';
+};
+
+const hasAnsweredQuestion = (value) => {
+  if (value === undefined || value === null) return false;
+  if (typeof value === 'string') return value.trim() !== '';
+  return true;
+};
+
+const buildQuestionWithAnswer = (question, answers) => {
+  const rawAnswer = answers[question.id];
+  const hasAnswer = hasAnsweredQuestion(rawAnswer);
+  const resolvedAnswer = hasAnswer ? rawAnswer : getDefaultQuestionAnswer(question);
+
+  return {
+    ...question,
+    answer: `${String(resolvedAnswer)}${hasAnswer ? '' : DEFAULT_ANSWER_MARKER}`,
+    isDefaultAnswer: !hasAnswer,
+  };
+};
+
 const ESGReportForm = () => {
   const history = useHistory();
   const location = useLocation();
@@ -720,12 +752,16 @@ const ESGReportForm = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    const answeredQuestions = filteredQuestions.map((question) =>
+      buildQuestionWithAnswer(question, questionAnswers)
+    );
+
     history.push({
       pathname: '/final-report',
       state: {
         source: 'ESG',
         esgData: formData,
-        visibleQuestions: filteredQuestions,
+        visibleQuestions: answeredQuestions,
       },
     });
   };
