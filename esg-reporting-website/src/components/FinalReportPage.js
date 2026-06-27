@@ -21,6 +21,24 @@ const FinalReportPage = () => {
   const reportAnswers = state.reportAnswers || state.questionAnswers || state.answers || {};
 
   const activeData = brsrData || esgData || griData;
+  const reportQuestions = Array.isArray(visibleQuestions) ? visibleQuestions : [];
+  const getQuestionAnswer = (question) => {
+    const savedAnswer = getAnswer(reportAnswers, question.id);
+    return isAnswered(savedAnswer) ? savedAnswer : question.answer;
+  };
+  const getUserQuestionAnswer = (question) => {
+    const savedAnswer = getAnswer(reportAnswers, question.id);
+    if (isAnswered(savedAnswer)) return savedAnswer;
+    // Supports previously saved reports that contain resolved questions but no
+    // separate answer map. Generated defaults must never count as user input.
+    return question.isDefaultAnswer === false ? question.answer : undefined;
+  };
+  const findQuestionAnswer = (pattern) => {
+    const question = reportQuestions.find((item) =>
+      pattern.test(String(item.question || '')) && isAnswered(getUserQuestionAnswer(item))
+    );
+    return question ? displayAnswer(getUserQuestionAnswer(question)) : '';
+  };
 
   if (!source || !activeData) {
     return (
@@ -42,8 +60,11 @@ const FinalReportPage = () => {
     );
   }
 
-  const filledFields = Object.values(activeData).filter((v) => v !== undefined && v !== '').length;
-  const totalFields = Object.keys(activeData).length || 1;
+  const completionValues = source === 'ESG' && reportQuestions.length
+    ? reportQuestions.map(getUserQuestionAnswer)
+    : Object.values(activeData);
+  const filledFields = completionValues.filter(isAnswered).length;
+  const totalFields = completionValues.length || 1;
   const completenessRatio = filledFields / totalFields;
   const disclosurePercent = Math.round(completenessRatio * 100);
 
@@ -80,11 +101,13 @@ const FinalReportPage = () => {
   // Simple derived metrics for hero cards
   const carbonFootprint =
     (esgData && (esgData.scope1Emissions || esgData.scope2Emissions || esgData.scope3Emissions)) ||
+    findQuestionAnswer(/GHG emissions|carbon footprint/i) ||
     (griData && griData.griEnvironmental && griData.griEnvironmental.ghgEmissionsOverview) ||
     'N/A';
 
   const genderDiversity =
     (esgData && esgData.genderDiversityPercent) ||
+    findQuestionAnswer(/gender diversity|women in (?:the )?workforce/i) ||
     (griData && griData.griSocial && griData.griSocial.genderDiversityRatios) ||
     (brsrData && brsrData.femaleEmployees && brsrData.totalEmployees
       ? `${Math.round((Number(brsrData.femaleEmployees) / Number(brsrData.totalEmployees || 1)) * 100)}%`
@@ -92,6 +115,7 @@ const FinalReportPage = () => {
 
   const csrSpend =
     (esgData && esgData.communityInvestment) ||
+    findQuestionAnswer(/community investment|CSR (?:spend|investment)/i) ||
     (griData && griData.griSocial && griData.griSocial.csrInvestments) ||
     (brsrData && brsrData.csrApplicable) ||
     'N/A';
@@ -412,20 +436,24 @@ const FinalReportPage = () => {
     ],
   };
 
-  const ALL_FRAMEWORKS_ORDER = [
-    'BRSR',
-    'GRI',
-    'SASB',
-    'TCFD',
-    'UNGC'
-  ];
-
-  const frameworksToShow = ALL_FRAMEWORKS_ORDER;
+  const frameworksToShow = source === 'ESG' && esgData
+    ? (Array.isArray(esgData.esgFrameworks) ? esgData.esgFrameworks : [])
+    : [source];
 
   const frameworkCards = frameworksToShow.map((fw) => {
     if (source === 'ESG' && esgData) {
-      const keys = ESG_FRAMEWORK_FIELDS[fw] || Object.keys(esgData || {});
-      const stats = countCompletion(esgData, keys);
+      const frameworkQuestions = reportQuestions.filter((question) =>
+        String(question.framework || '').toLowerCase().includes(String(fw).toLowerCase())
+      );
+      const stats = frameworkQuestions.length
+        ? countCompletion(
+          frameworkQuestions.reduce((answers, question, index) => ({
+            ...answers,
+            [index]: getUserQuestionAnswer(question),
+          }), {}),
+          frameworkQuestions.map((question, index) => String(index))
+        )
+        : countCompletion(esgData, ESG_FRAMEWORK_FIELDS[fw] || []);
       return { framework: fw, ...stats };
     }
     if (source === 'BRSR' && brsrData) {
@@ -649,7 +677,7 @@ const FinalReportPage = () => {
         </div>
       </section>
 
-      <section className="final-grid-section">
+      <section className="final-grid-section" hidden>
         <h2>Data grid – module breakdown</h2>
         <p className="final-helper-text">
           Explore the key values that feed into your final report. Search by keyword and expand modules
@@ -700,7 +728,7 @@ const FinalReportPage = () => {
       </section>
 
       {source === 'ESG' && Array.isArray(visibleQuestions) && (
-        <section className="final-report-details">
+        <section className="final-report-details" hidden>
           <h2>ESG questionnaire responses</h2>
           <div className="final-question-list">
             {visibleQuestions.map((question) => {
@@ -721,7 +749,7 @@ const FinalReportPage = () => {
         </section>
       )}
 
-      <section className="final-report-details">
+      <section className="final-report-details" hidden>
         {source === 'BRSR' && (
         <>
           <h2>Detailed BRSR data (SEBI-aligned modules)</h2>
