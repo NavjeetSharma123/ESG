@@ -3,12 +3,22 @@ import { useLocation, useHistory } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
 import { generateBRSRReportHTML, generateBRSRReportPDFFromTemplate, generateESGReportPDF } from '../utils/reportGenerator';
 import './FinalReportPage.css';
+import { getAnswer, isAnswered, loadESGDraft } from '../utils/answerManagement';
+
+const displayAnswer = (value) => {
+  if (Array.isArray(value)) return value.join(', ');
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (value && typeof value === 'object') return JSON.stringify(value);
+  return value === 0 ? '0' : String(value ?? '');
+};
 
 const FinalReportPage = () => {
   const location = useLocation();
   const history = useHistory();
-  const state = location.state || {};
+  const persistedDraft = loadESGDraft() || {};
+  const state = { ...persistedDraft, ...(location.state || {}) };
   const { source, brsrData, esgData, griData, visibleQuestions } = state;
+  const reportAnswers = state.reportAnswers || state.questionAnswers || state.answers || {};
 
   const activeData = brsrData || esgData || griData;
 
@@ -688,6 +698,28 @@ const FinalReportPage = () => {
           )}
         </div>
       </section>
+
+      {source === 'ESG' && Array.isArray(visibleQuestions) && (
+        <section className="final-report-details">
+          <h2>ESG questionnaire responses</h2>
+          <div className="final-question-list">
+            {visibleQuestions.map((question) => {
+              const mappedAnswer = getAnswer(reportAnswers, question.id);
+              const answer = isAnswered(mappedAnswer) ? mappedAnswer : (question.answer ?? '');
+              if (!isAnswered(answer)) console.warn(`No answer found for question ${question.id}`);
+              return (
+                <article className="final-question-card" key={String(question.id)}>
+                  <div className="final-question-heading">
+                    <strong>{question.question || `Question ${question.id}`}</strong>
+                    <span>{question.framework || 'General'}</span>
+                  </div>
+                  <p>{isAnswered(answer) ? displayAnswer(answer) : 'Not answered'}</p>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <section className="final-report-details">
         {source === 'BRSR' && (

@@ -1,6 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import './ESGReportForm.css';
+import {
+  getAnswer, getLinkedQuestionIds, isAnswered, loadESGDraft,
+  normalizeQuestionId, propagateLinkedAnswer, saveESGAnswers,
+} from '../utils/answerManagement';
 
 const COUNTRY_FRAMEWORKS = {
   'United States': ['SASB', 'TCFD', 'GRI'],
@@ -115,26 +119,34 @@ const ESGReportForm = () => {
   const [questionsError, setQuestionsError] = useState('');
   const [questionSearch, setQuestionSearch] = useState('');
   const [questionAnswers, setQuestionAnswers] = useState({});
+  const [manuallyEditedAnswers, setManuallyEditedAnswers] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [lastSaved, setLastSaved] = useState(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showValidation, setShowValidation] = useState(false);
   const [selectedDepartments, setSelectedDepartments] = useState([]);
 
   const handleQuestionAnswer = (id, value) => {
-    setQuestionAnswers((prev) => ({ ...prev, [id]: value }));
+    const normalizedId = normalizeQuestionId(id);
+    setManuallyEditedAnswers((prev) => ({ ...prev, [normalizedId]: true }));
+    setQuestionAnswers((prev) => propagateLinkedAnswer(
+      prev, questions, normalizedId, value, manuallyEditedAnswers
+    ));
+    setHasUnsavedChanges(true);
+    setSaveError('');
   };
 
   const renderQuestionInput = (q) => {
     const type = String(q.questionType || '').toLowerCase();
-    const value = questionAnswers[q.id];
+    const value = getAnswer(questionAnswers, q.id);
 
     if (type === 'yes/no') {
       return (
-        <label className="question-yn-label">
-          <input
-            type="checkbox"
-            checked={!!value}
-            onChange={(e) => handleQuestionAnswer(q.id, e.target.checked)}
-          />
-          <span>Yes</span>
-        </label>
+        <select className="question-answer-input" value={value === undefined ? '' : String(value)}
+          onChange={(e) => handleQuestionAnswer(q.id, e.target.value === 'true')}>
+          <option value="">Select an answer</option><option value="true">Yes</option><option value="false">No</option>
+        </select>
       );
     }
 
@@ -444,6 +456,15 @@ const ESGReportForm = () => {
       esgFrameworks: frameworks,
     };
   });
+
+  useEffect(() => {
+    if (presetCompany) return;
+    const draft = loadESGDraft();
+    if (!draft) return;
+    setFormData((prev) => ({ ...prev, ...(draft.esgData || draft.formData || {}) }));
+    setQuestionAnswers(draft.questionAnswers || draft.answers || {});
+    setLastSaved(draft.savedAt ? new Date(draft.savedAt) : null);
+  }, [presetCompany]);
   const hasFramework = (fw) => Array.isArray(formData.esgFrameworks) && formData.esgFrameworks.some((f) => f.includes(fw)); // check substring match
   const noFrameworkSelected = !Array.isArray(formData.esgFrameworks) || formData.esgFrameworks.length === 0;
   const selectedSector = normalizeIndustrySector(formData.industry);
@@ -466,28 +487,26 @@ const ESGReportForm = () => {
     setSelectedDepartments((prev) => prev.filter((dep) => availableDepartments.includes(dep)));
   }, [availableDepartments]);
 
+  const applicableQuestions = useMemo(() => questions.filter((q) => {
+    if (!questionMatchesCompanyInfo(q, formData.industry, selectedFrameworks)) return false;
+    return selectedDepartments.length === 0 || (q.department && selectedDepartments.includes(q.department));
+  }), [questions, formData.industry, selectedFrameworks, selectedDepartments]);
+
   const filteredQuestions = useMemo(() => {
     const search = questionSearch.trim().toLowerCase();
-    return questions.filter((q) => {
-      const matchesCompanyInfo = questionMatchesCompanyInfo(
-        q,
-        formData.industry,
-        selectedFrameworks
-      );
-      if (!matchesCompanyInfo) return false;
-      if (
-        selectedDepartments.length > 0
-        && (!q.department || !selectedDepartments.includes(q.department))
-      ) {
-        return false;
-      }
-
+    return applicableQuestions.filter((q) => {
       if (!search) return true;
-      return String(q.question || '')
-        .toLowerCase()
-        .includes(search);
+      return [q.id, q.question, q.framework, q.department].some((value) =>
+        String(value || '').toLowerCase().includes(search));
     });
-  }, [questions, questionSearch, formData.industry, selectedFrameworks, selectedDepartments]);
+  }, [applicableQuestions, questionSearch]);
+
+  const frameworkStats = useMemo(() => selectedFrameworks.map((framework) => {
+    const frameworkQuestions = questions.filter((q) => questionMatchesAnyFramework(q.framework, [framework]));
+    const completed = frameworkQuestions.filter((q) => isAnswered(getAnswer(questionAnswers, q.id))).length;
+    return { framework, completed, total: frameworkQuestions.length,
+      percent: frameworkQuestions.length ? Math.round((completed / frameworkQuestions.length) * 100) : 0 };
+  }), [selectedFrameworks, questions, questionAnswers]);
 
   const displayDepartments = useMemo(() => {
     if (selectedDepartments.length > 0) {
@@ -716,7 +735,7 @@ const ESGReportForm = () => {
   }, [formData.esgFrameworks, hasFramework, noFrameworkSelected]);
 
   const progressPct = useMemo(() => {
-    const total = Math.max(1, progressFieldKeys.length);
+    const total = Math.max(1, progressFieldKeys.length + applicableQuestions.length);
     const completed = progressFieldKeys.reduce((count, key) => {
       const value = formData[key];
       if (Array.isArray(value)) return count + (value.length > 0 ? 1 : 0);
@@ -724,8 +743,9 @@ const ESGReportForm = () => {
       if (value === undefined || value === null) return count;
       return count + 1;
     }, 0);
-    return Math.round((completed / total) * 100);
-  }, [formData, progressFieldKeys]);
+    const completedQuestions = applicableQuestions.filter((q) => isAnswered(getAnswer(questionAnswers, q.id))).length;
+    return Math.round(((completed + completedQuestions) / total) * 100);
+  }, [formData, progressFieldKeys, applicableQuestions, questionAnswers]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -736,6 +756,7 @@ const ESGReportForm = () => {
       }
       return { ...prev, [name]: value };
     });
+    setHasUnsavedChanges(true);
   };
 
   const handleFrameworkToggle = (framework) => {
@@ -747,20 +768,48 @@ const ESGReportForm = () => {
         : [...current, framework];
       return { ...prev, esgFrameworks: updated };
     });
+    setHasUnsavedChanges(true);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSaveProgress = async () => {
+    if (saving) return true;
+    setSaving(true); setSaveError('');
+    try {
+      await saveESGAnswers({ source: 'ESG', esgData: formData, questionAnswers,
+        visibleQuestions: applicableQuestions.map((q) => buildQuestionWithAnswer(q, questionAnswers)) });
+      setLastSaved(new Date()); setHasUnsavedChanges(false); return true;
+    } catch (error) {
+      console.error(error); setSaveError('Save failed. Your changes are still on this page.'); return false;
+    } finally { setSaving(false); }
+  };
 
-    const answeredQuestions = filteredQuestions.map((question) =>
+  useEffect(() => {
+    const timer = setInterval(() => { if (hasUnsavedChanges && !saving) handleSaveProgress(); }, 30000);
+    return () => clearInterval(timer);
+  });
+
+  useEffect(() => {
+    const warnOnExit = (event) => { if (hasUnsavedChanges) { event.preventDefault(); event.returnValue = ''; } };
+    window.addEventListener('beforeunload', warnOnExit);
+    return () => window.removeEventListener('beforeunload', warnOnExit);
+  }, [hasUnsavedChanges]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setShowValidation(true);
+
+    const answeredQuestions = applicableQuestions.map((question) =>
       buildQuestionWithAnswer(question, questionAnswers)
     );
+
+    await handleSaveProgress();
 
     history.push({
       pathname: '/final-report',
       state: {
         source: 'ESG',
         esgData: formData,
+        reportAnswers: questionAnswers,
         visibleQuestions: answeredQuestions,
       },
     });
@@ -781,7 +830,12 @@ const ESGReportForm = () => {
                 <span className="esg-department-bar-hint">Optional: select departments to narrow questions</span>
               ) : null}
             </div>
-            <div className="esg-progress-pct">{progressPct}%</div>
+            <div className="esg-save-cluster">
+              <span className={`esg-save-status ${saveError ? 'is-error' : ''}`} role="status">
+                {saving ? 'Saving...' : saveError || (hasUnsavedChanges ? 'Unsaved Changes' : (lastSaved ? 'Saved' : 'Not saved yet'))}
+              </span>
+              <div className="esg-progress-pct">{progressPct}% completed</div>
+            </div>
           </div>
           {companyInfoReady && availableDepartments.length > 0 ? (
             <div className="esg-progress-steps" role="group" aria-label="Select departments">
@@ -810,6 +864,7 @@ const ESGReportForm = () => {
           <div className="esg-progress-track" aria-hidden="true">
             <div className="esg-progress-fill" style={{ width: `${progressPct}%` }} />
           </div>
+          {lastSaved && !saving && <small className="esg-last-saved">Last saved {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>}
         </div>
       </div>
 
@@ -903,6 +958,11 @@ const ESGReportForm = () => {
                   </label>
                 ))}
               </div>
+              {frameworkStats.length > 0 && <div className="framework-stats" aria-label="Framework completion">
+                {frameworkStats.map((stat) => <span className="framework-stat-chip" key={stat.framework}>
+                  <strong>{stat.framework}</strong> {stat.completed}/{stat.total} · {stat.percent}%
+                </span>)}
+              </div>}
               <small>
                 Select all frameworks you report against. You can include frameworks beyond the recommended list.
               </small>
@@ -977,7 +1037,7 @@ const ESGReportForm = () => {
                 id="questionSearch"
                 value={questionSearch}
                 onChange={(e) => setQuestionSearch(e.target.value)}
-                placeholder="Search by question text..."
+                placeholder="Search questions, frameworks, departments or IDs..."
                 disabled={questionsLoading || !!questionsError}
               />
             </div>
@@ -1031,12 +1091,17 @@ const ESGReportForm = () => {
                             { /* <td>{dep}</td> */ }
                             </tr>
                             {deptQuestions.map((q) => (
-                              <tr key={q.id}>
+                              <tr key={q.id} className={(q.required || q.isMandatory || q.mandatory) && showValidation && !isAnswered(getAnswer(questionAnswers, q.id)) ? 'question-missing' : ''}>
                                 <td>
                                   <div className="question-item">
                                     <p className="question-text">{q.question} <span class="tooltip">🛈
-                                      <span class="tooltiptext">{q.guidelines}</span>
+                                      <span className="tooltiptext">{q.guidelines}</span>
                                     </span></p>
+                                    <div className="question-tags">
+                                      {(q.required || q.isMandatory || q.mandatory) && <span className="question-chip required">Required</span>}
+{/*                                      {String(q.framework || '').split(/[\s,;/]+/).filter(Boolean).map((fw) => <span className="question-chip" key={fw}>{fw}</span>)}
+                                      {getLinkedQuestionIds(q).map((id) => <span className="question-chip linked" key={id}>Linked: #{id}</span>)} */}
+                                    </div>
                                     <div className="question-answer">{renderQuestionInput(q)}</div>
                                   </div>
                                 </td>
@@ -1054,13 +1119,10 @@ const ESGReportForm = () => {
         </section>
 
         <div className="form-actions">
-          <button type="submit" className="btn btn-primary btn-lg" style={{position: 'fixed',
-    bottom: '100px',
-    right: '50px',
-    borderRadius: '50%',
-    height: '150px'}}>
-            Submit details
+          <button type="button" className="btn btn-secondary btn-lg" onClick={handleSaveProgress} disabled={saving}>
+            {saving ? 'Saving...' : 'Save Progress'}
           </button>
+          <button type="submit" className="btn btn-primary btn-lg">Generate Report</button>
         </div>
       </form>
     </div>
