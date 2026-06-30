@@ -13,7 +13,7 @@ const Footer = () => {
         <div className="site-footer__grid">
           <div className="site-footer__brand">
             <Link to="/" className="site-footer__logo">
-              <span className="site-footer__logo-mark" aria-hidden="true" />
+              <span className="site-footer__logo-mark" aria-hidden="true"><img src="logo.png" alt="Icon"/></span>
               <span>ESG Reporting</span>
             </Link>
             <p className="site-footer__tagline">

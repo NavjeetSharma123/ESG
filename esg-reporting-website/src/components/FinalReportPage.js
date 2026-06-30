@@ -1,1031 +1,177 @@
-import React from 'react';
-import { useLocation, useHistory } from 'react-router-dom';
+import React, { useMemo, useState } from 'react';
+import { useHistory, useLocation } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
-import { generateBRSRReportHTML, generateBRSRReportPDFFromTemplate, generateESGReportPDF } from '../utils/reportGenerator';
-import './FinalReportPage.css';
+import { generateBRSRReportPDFFromTemplate, generateESGReportPDF } from '../utils/reportGenerator';
 import { getAnswer, isAnswered, loadESGDraft } from '../utils/answerManagement';
+import './FinalReportPage.css';
 
-const displayAnswer = (value) => {
-  if (Array.isArray(value)) return value.join(', ');
-  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-  if (value && typeof value === 'object') return JSON.stringify(value);
-  return value === 0 ? '0' : String(value ?? '');
+const FRAMEWORK_FIELDS = {
+  GRI: ['companyName', 'industry', 'reportingPeriod', 'scope1Emissions', 'scope2Emissions', 'energyConsumption', 'waterUsage', 'wasteGenerated', 'totalEmployees', 'genderDiversityPercent', 'safetyIncidents', 'boardSize', 'ethicsPolicy'],
+  'ISSB / SASB': ['companyName', 'industry', 'reportingPeriod', 'revenue', 'scope1Emissions', 'scope2Emissions', 'scope3Emissions', 'energyConsumption', 'boardSize', 'sustainabilityCommittee', 'esgTargetsSet'],
+  SASB: ['companyName', 'industry', 'reportingPeriod', 'revenue', 'scope1Emissions', 'scope2Emissions', 'energyConsumption', 'boardSize', 'sustainabilityCommittee'],
+  TCFD: ['companyName', 'industry', 'reportingPeriod', 'scope1Emissions', 'scope2Emissions', 'scope3Emissions', 'boardSize', 'sustainabilityCommittee', 'esgTargetsSet', 'governanceInitiatives'],
+  BRSR: ['companyName', 'industry', 'reportingPeriod', 'totalEmployees', 'genderDiversityPercent', 'safetyIncidents', 'scope1Emissions', 'scope2Emissions', 'ethicsPolicy'],
+  'UN Global Compact': ['companyName', 'industry', 'reportingPeriod', 'totalEmployees', 'genderDiversityPercent', 'trainingHoursPerEmployee', 'safetyIncidents', 'communityInvestment', 'ethicsPolicy'],
 };
+
+const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
+const valueOrDash = (value, suffix = '') => (isAnswered(value) ? `${value}${suffix}` : '—');
+const downloadBlob = (content, type, filename) => {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
+const Progress = ({ value, tone = 'green' }) => (
+  <div className="fr-progress" aria-label={`${value}% complete`}>
+    <span className={`fr-progress-fill ${tone}`} style={{ width: `${clamp(value)}%` }} />
+  </div>
+);
 
 const FinalReportPage = () => {
   const location = useLocation();
   const history = useHistory();
+  const [darkMode, setDarkMode] = useState(false);
+  const [openFramework, setOpenFramework] = useState(null);
   const persistedDraft = loadESGDraft() || {};
   const state = { ...persistedDraft, ...(location.state || {}) };
   const { source, brsrData, esgData, griData, visibleQuestions } = state;
   const reportAnswers = state.reportAnswers || state.questionAnswers || state.answers || {};
-
   const activeData = brsrData || esgData || griData;
-  const reportQuestions = Array.isArray(visibleQuestions) ? visibleQuestions : [];
-  const getQuestionAnswer = (question) => {
-    const savedAnswer = getAnswer(reportAnswers, question.id);
-    return isAnswered(savedAnswer) ? savedAnswer : question.answer;
-  };
-  const getUserQuestionAnswer = (question) => {
-    const savedAnswer = getAnswer(reportAnswers, question.id);
-    if (isAnswered(savedAnswer)) return savedAnswer;
-    // Supports previously saved reports that contain resolved questions but no
-    // separate answer map. Generated defaults must never count as user input.
-    return question.isDefaultAnswer === false ? question.answer : undefined;
-  };
-  const findQuestionAnswer = (pattern) => {
-    const question = reportQuestions.find((item) =>
-      pattern.test(String(item.question || '')) && isAnswered(getUserQuestionAnswer(item))
-    );
-    return question ? displayAnswer(getUserQuestionAnswer(question)) : '';
-  };
+  const questions = Array.isArray(visibleQuestions) ? visibleQuestions : [];
+
+  const flatData = useMemo(() => {
+    if (!griData) return activeData || {};
+    return Object.assign({}, griData.baseFormData, griData.griUniversal, griData.griEconomic, griData.griEnvironmental, griData.griSocial);
+  }, [activeData, griData]);
 
   if (!source || !activeData) {
-    return (
-      <div className="final-report-page">
-        <div className="final-report-card">
-          <h1>Final Report</h1>
-          <p>No report data was found. Please complete a reporting flow first.</p>
-          <div className="final-report-actions">
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => history.push('/')}
-            >
-              Go to Home
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+    return <main className="final-report-page"><div className="fr-empty"><span>◎</span><h1>No report data found</h1><p>Complete a reporting flow first, then return here for your readiness review.</p><button className="fr-btn primary" onClick={() => history.push('/')}>Go to dashboard</button></div></main>;
   }
 
-  const completionValues = source === 'ESG' && reportQuestions.length
-    ? reportQuestions.map(getUserQuestionAnswer)
-    : Object.values(activeData);
-  const filledFields = completionValues.filter(isAnswered).length;
-  const totalFields = completionValues.length || 1;
-  const completenessRatio = filledFields / totalFields;
-  const disclosurePercent = Math.round(completenessRatio * 100);
-
-  let completenessLabel = 'Moderate disclosure completeness vs peers';
-  if (completenessRatio > 0.8) {
-    completenessLabel = 'High disclosure completeness vs peers';
-  } else if (completenessRatio < 0.5) {
-    completenessLabel = 'Low disclosure completeness vs peers';
-  }
-
-  const companyName =
-    (brsrData && brsrData.companyName) ||
-    (esgData && esgData.companyName) ||
-    (griData && griData.baseFormData && griData.baseFormData.companyName) ||
-    'N/A';
-
-  const netWorth = brsrData ? brsrData.netWorth : 'N/A';
-  const turnover =
-    (brsrData && brsrData.turnover) ||
-    (esgData && esgData.revenue) ||
-    (griData && griData.griEconomic && griData.griEconomic.revenueAndProfits) ||
-    'N/A';
-
-  const totalEmployeesHighlight =
-    (brsrData && brsrData.totalEmployees) ||
-    (esgData && (esgData.totalEmployees || esgData.employeeCount)) ||
-    (griData &&
-      ((griData.griUniversal && griData.griUniversal.numberOfEmployees) ||
-        (griData.griSocial && griData.griSocial.totalWorkforce))) ||
-    'N/A';
-
-  const totalWorkersHighlight = brsrData ? brsrData.totalWorkers || 'N/A' : 'N/A';
-
-  // Simple derived metrics for hero cards
-  const carbonFootprint =
-    (esgData && (esgData.scope1Emissions || esgData.scope2Emissions || esgData.scope3Emissions)) ||
-    findQuestionAnswer(/GHG emissions|carbon footprint/i) ||
-    (griData && griData.griEnvironmental && griData.griEnvironmental.ghgEmissionsOverview) ||
-    'N/A';
-
-  const genderDiversity =
-    (esgData && esgData.genderDiversityPercent) ||
-    findQuestionAnswer(/gender diversity|women in (?:the )?workforce/i) ||
-    (griData && griData.griSocial && griData.griSocial.genderDiversityRatios) ||
-    (brsrData && brsrData.femaleEmployees && brsrData.totalEmployees
-      ? `${Math.round((Number(brsrData.femaleEmployees) / Number(brsrData.totalEmployees || 1)) * 100)}%`
-      : 'N/A');
-
-  const csrSpend =
-    (esgData && esgData.communityInvestment) ||
-    findQuestionAnswer(/community investment|CSR (?:spend|investment)/i) ||
-    (griData && griData.griSocial && griData.griSocial.csrInvestments) ||
-    (brsrData && brsrData.csrApplicable) ||
-    'N/A';
-
-  const isCompliant = source === 'BRSR' ? completenessRatio >= 0.8 : completenessRatio >= 0.6;
-
-  const safeFileName = (name) => String(name || 'ESG-Report')
-    .trim()
-    .replace(/[\\/:*?"<>|]+/g, '-')
-    .replace(/\s+/g, '-');
-
-  const getDownloadData = () => {
-    if (source === 'ESG' && esgData) {
-      return esgData;
-    }
-
-    if (source === 'GRI' && griData) {
-      return {
-        ...(griData.baseFormData || {}),
-        ...(griData.griUniversal || {}),
-        ...(griData.griEconomic || {}),
-        ...(griData.griEnvironmental || {}),
-        ...(griData.griSocial || {}),
-        companyName,
-        esgFrameworks: ['GRI'],
-        scope1Emissions:
-          (griData.griEnvironmental && griData.griEnvironmental.ghgEmissionsOverview) || '',
-        revenue:
-          (griData.griEconomic && griData.griEconomic.revenueAndProfits) || '',
-        totalEmployees:
-          (griData.griUniversal && griData.griUniversal.numberOfEmployees) ||
-          (griData.griSocial && griData.griSocial.totalWorkforce) ||
-          '',
-        genderDiversityPercent:
-          (griData.griSocial && griData.griSocial.genderDiversityRatios) || '',
-        communityInvestment:
-          (griData.griSocial && griData.griSocial.csrInvestments) || '',
-      };
-    }
-
-    return activeData;
+  const answerFor = (question) => {
+    const saved = getAnswer(reportAnswers, question.id);
+    if (isAnswered(saved)) return saved;
+    return question.isDefaultAnswer === false ? question.answer : undefined;
   };
+  const values = questions.length ? questions.map(answerFor) : Object.values(flatData || {});
+  const totalQuestions = Math.max(values.length, 1);
+  const answered = values.filter(isAnswered).length;
+  const pending = Math.max(totalQuestions - answered, 0);
+  const completion = Math.round((answered / totalQuestions) * 100);
+  const companyName = flatData.companyName || 'Your organisation';
+  const selectedFrameworks = source === 'ESG' && Array.isArray(esgData.esgFrameworks) && esgData.esgFrameworks.length ? esgData.esgFrameworks : [source];
+  const industry = flatData.industry || flatData.sector || 'Industry not specified';
+  const reportingPeriod = flatData.reportingPeriod || flatData.financialYear || 'Current reporting period';
+  const updatedBy = state.lastUpdatedBy || 'ESG Reporting Team';
+  const evidenceCount = Number(state.supportingDocumentsCount || flatData.supportingDocumentsCount || 0);
+  const commentsCount = Number(state.reviewCommentsCount || 0);
+  const materialTopics = Array.isArray(state.materialTopics) ? state.materialTopics : ['Climate action', 'People & culture', 'Ethical governance'];
+  const autoPopulated = questions.filter((q) => q.isDefaultAnswer || q.autoPopulated).length;
+  const reused = questions.filter((q) => String(q.framework || '').includes(',') || Array.isArray(q.frameworks) && q.frameworks.length > 1).length;
+  const coverage = clamp(Math.round(completion * 0.94 + (evidenceCount > 0 ? 4 : 0)));
+  const readiness = clamp(Math.round(completion * 0.65 + coverage * 0.2 + Math.min(evidenceCount * 2, 10) + (commentsCount === 0 ? 5 : 2)));
+  const status = readiness >= 85 ? 'Ready for submission' : readiness >= 55 ? 'In progress' : 'Draft';
 
-  const getQuestionFrameworks = (question, selectedFrameworks) => {
-    const questionFramework = String(question.framework || '').toLowerCase();
-    if (!questionFramework) return selectedFrameworks.length ? selectedFrameworks : ['General'];
-
-    const matched = selectedFrameworks.filter((framework) =>
-      questionFramework.includes(String(framework).toLowerCase())
-    );
-
-    if (matched.length) return matched;
-    return [question.framework];
-  };
-
-  const addQuestionnaireFooters = (doc) => {
-    const pageCount = doc.internal.getNumberOfPages();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-
-    for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
-      doc.setPage(pageNumber);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(90, 90, 90);
-      doc.text(`Page ${pageNumber} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
-    }
-  };
-
-  const downloadVisibleQuestionsPDF = () => {
-    const currentVisibleQuestions = Array.isArray(visibleQuestions) ? visibleQuestions : [];
-    if (currentVisibleQuestions.length === 0) {
-      alert('No questions available for the selected filters.');
-      return;
-    }
-
-    const selectedFrameworks = Array.isArray(esgData && esgData.esgFrameworks)
-      ? esgData.esgFrameworks
-      : [];
-    const grouped = [];
-    const groupedByFramework = {};
-
-    currentVisibleQuestions.forEach((question) => {
-      getQuestionFrameworks(question, selectedFrameworks).forEach((framework) => {
-        if (!groupedByFramework[framework]) {
-          groupedByFramework[framework] = [];
-          grouped.push(framework);
-        }
-        groupedByFramework[framework].push(question);
-      });
-    });
-
-    const includedFrameworks = grouped.join(', ');
-    const totalQuestions = grouped.reduce(
-      (count, framework) => count + groupedByFramework[framework].length,
-      0
-    );
-    const today = new Date().toISOString().slice(0, 10);
-    const doc = new jsPDF();
-    const marginLeft = 18;
-    const marginRight = 18;
-    const marginTop = 20;
-    const marginBottom = 20;
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const usableWidth = pageWidth - marginLeft - marginRight;
-    let y = marginTop;
-
-    doc.setProperties({
-      title: 'ESG Questionnaire',
-      author: 'ESG Sustainability Platform',
-      subject: 'Visible ESG Questions',
-      creator: 'ESG Sustainability Platform',
-    });
-
-    const ensureSpace = (heightNeeded) => {
-      if (y + heightNeeded <= pageHeight - marginBottom) return;
-      doc.addPage();
-      y = marginTop;
-    };
-
-    const addWrappedText = (text, fontSize, fontStyle, gapAfter = 5) => {
-      doc.setFont('helvetica', fontStyle);
-      doc.setFontSize(fontSize);
-      doc.setTextColor(20, 20, 20);
-      const lines = doc.splitTextToSize(String(text || 'N/A'), usableWidth);
-      const lineHeight = fontSize * 0.45;
-      ensureSpace((lines.length * lineHeight) + gapAfter);
-      doc.text(lines, marginLeft, y);
-      y += (lines.length * lineHeight) + gapAfter;
-    };
-
-    addWrappedText('ESG Questionnaire', 18, 'bold', 8);
-    addWrappedText(`Generated on: ${today}`, 12, 'normal', 4);
-    addWrappedText(`Frameworks Included: ${includedFrameworks || 'General'}`, 12, 'normal', 4);
-    addWrappedText(`Total Questions: ${totalQuestions}`, 12, 'normal', 10);
-    addWrappedText('* Answer was defaulted because no response was provided.', 10, 'italic', 10);
-
-    grouped.forEach((framework) => {
-      ensureSpace(24);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(15);
-      doc.setTextColor(13, 59, 44);
-      doc.text(framework, marginLeft, y);
-      y += 7;
-      doc.setDrawColor(13, 59, 44);
-      doc.line(marginLeft, y, pageWidth - marginRight, y);
-      y += 8;
-
-      groupedByFramework[framework].forEach((question, index) => {
-        const questionLines = doc.splitTextToSize(String(question.question || 'N/A'), usableWidth);
-        const answerText = `Answer: ${question.answer || 'Not disclosed *'}`;
-        const answerLines = doc.splitTextToSize(answerText, usableWidth);
-        const blockHeight = 8 + (questionLines.length * 5.4) + 4 + (answerLines.length * 5.4) + 8;
-        ensureSpace(blockHeight);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(12);
-        doc.setTextColor(20, 20, 20);
-        doc.text(`${index + 1}.`, marginLeft, y);
-        y += 7;
-        doc.setFont('helvetica', 'normal');
-        doc.text(questionLines, marginLeft, y);
-        y += (questionLines.length * 5.4) + 4;
-        doc.setFont('helvetica', question.isDefaultAnswer ? 'italic' : 'bold');
-        doc.setTextColor(question.isDefaultAnswer ? 110 : 20, 20, 20);
-        doc.text(answerLines, marginLeft, y);
-        y += (answerLines.length * 5.4) + 4;
-        doc.setDrawColor(210, 210, 210);
-        doc.line(marginLeft, y, pageWidth - marginRight, y);
-        y += 8;
-      });
-    });
-
-    addQuestionnaireFooters(doc);
-    doc.save(`ESG_Questions_${today}.pdf`);
-  };
-
-  const handleDownloadPDF = async () => {
-    if (source === 'ESG') {
-      downloadVisibleQuestionsPDF();
-      return;
-    }
-
-    if (source === 'BRSR' && brsrData) {
-      try {
-        const pdfBlob = await generateBRSRReportPDFFromTemplate(brsrData);
-        const url = URL.createObjectURL(pdfBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${safeFileName(brsrData.companyName || 'BRSR')}-SEBI-BRSR-Annexure-Report.pdf`;
-        link.click();
-        URL.revokeObjectURL(url);
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to generate BRSR template PDF:', err);
-        alert('Failed to generate the template-based BRSR PDF. Please try again.');
-      }
-      return;
-    }
-
-    try {
-      const pdfBlob = generateESGReportPDF(getDownloadData());
-      const url = URL.createObjectURL(pdfBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${safeFileName(companyName)}-${source || 'ESG'}-Report.pdf`;
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to generate report PDF:', err);
-      alert('Failed to generate the report PDF. Please try again.');
-    }
-  };
-
-  const handleOpenBRSRHTML = () => {
-    if (source !== 'BRSR' || !brsrData) {
-      alert('BRSR HTML is only available for BRSR reports.');
-      return;
-    }
-    try {
-      const html = generateBRSRReportHTML(brsrData);
-      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const win = window.open(url, '_blank', 'noopener,noreferrer');
-      if (!win) {
-        alert('Popup blocked. Please allow popups to view the HTML report.');
-      }
-      // Allow the new tab time to load before revoking (safe in most browsers).
-      setTimeout(() => URL.revokeObjectURL(url), 10_000);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to generate BRSR HTML:', err);
-      alert('Failed to generate BRSR HTML. Please try again.');
-    }
-  };
-
-  const countCompletion = (data, keys) => {
-    const safe = data && typeof data === 'object' ? data : {};
-    const total = Math.max(keys.length, 1);
-    const filled = keys.reduce((acc, key) => {
-      const value = safe[key];
-      if (value === undefined || value === null) return acc;
-      if (typeof value === 'string' && value.trim() === '') return acc;
-      if (Array.isArray(value) && value.length === 0) return acc;
-      return acc + 1;
-    }, 0);
-    const remaining = Math.max(total - filled, 0);
-    const percent = Math.round((filled / total) * 100);
-    return { total, filled, remaining, percent };
-  };
-
-  const ESG_FRAMEWORK_FIELDS = {
-    'GRI': [
-      'companyName', 'industry', 'reportingPeriod', 'hqLocation', 'employeeCount', 'revenue', 'website',
-      'scope1Emissions', 'scope2Emissions', 'scope3Emissions', 'energyConsumption', 'renewableEnergyPercent',
-      'waterUsage', 'wasteGenerated', 'wasteRecycledPercent', 'environmentalInitiatives',
-      'totalEmployees', 'genderDiversityPercent', 'trainingHoursPerEmployee', 'safetyIncidents',
-      'communityInvestment', 'employeeTurnoverPercent', 'socialInitiatives',
-      'boardSize', 'independentDirectorsPercent', 'sustainabilityCommittee', 'esgTargetsSet', 'ethicsPolicy',
-      'governanceInitiatives',
-    ],
-    'ISSB / SASB': [
-      'companyName', 'industry', 'reportingPeriod', 'hqLocation', 'revenue',
-      'scope1Emissions', 'scope2Emissions', 'scope3Emissions',
-      'energyConsumption', 'renewableEnergyPercent',
-      'boardSize', 'sustainabilityCommittee', 'esgTargetsSet',
-      'scope1FuelStationaryDetails', 'scope1CompanyVehicleDetails', 'scope1RefrigerantDetails',
-      'scope2ElectricityDetails',
-    ],
-    'TCFD': [
-      'companyName', 'industry', 'reportingPeriod', 'hqLocation',
-      'scope1Emissions', 'scope2Emissions', 'scope3Emissions',
-      'scope1FuelStationaryDetails', 'scope2ElectricityDetails',
-      'boardSize', 'independentDirectorsPercent', 'sustainabilityCommittee',
-      'esgTargetsSet', 'governanceInitiatives',
-    ],
-    'UN Global Compact': [
-      'companyName', 'industry', 'reportingPeriod', 'hqLocation', 'employeeCount',
-      'totalEmployees', 'genderDiversityPercent', 'trainingHoursPerEmployee', 'safetyIncidents',
-      'communityInvestment', 'employeeTurnoverPercent', 'socialInitiatives',
-      'ethicsPolicy', 'governanceInitiatives',
-    ],
-    'CDP': [
-      'companyName', 'industry', 'reportingPeriod', 'hqLocation',
-      'scope1Emissions', 'scope2Emissions', 'scope3Emissions',
-      'energyConsumption', 'renewableEnergyPercent',
-      'scope1FuelStationaryDetails', 'scope2ElectricityDetails',
-      'waterUsage', 'wasteGenerated', 'wasteRecycledPercent',
-    ],
-    'CSRD / ESRS': [
-      'companyName', 'industry', 'reportingPeriod', 'hqLocation', 'employeeCount', 'revenue',
-      'scope1Emissions', 'scope2Emissions', 'scope3Emissions',
-      'energyConsumption', 'renewableEnergyPercent', 'waterUsage', 'wasteGenerated', 'wasteRecycledPercent',
-      'totalEmployees', 'genderDiversityPercent', 'trainingHoursPerEmployee', 'safetyIncidents',
-      'boardSize', 'independentDirectorsPercent', 'sustainabilityCommittee', 'ethicsPolicy',
-    ],
-    'SFDR': [
-      'companyName', 'industry', 'reportingPeriod', 'hqLocation', 'revenue',
-      'scope1Emissions', 'scope2Emissions', 'scope3Emissions', 'energyConsumption', 'renewableEnergyPercent',
-    ],
-    'UK SDR': [
-      'companyName', 'industry', 'reportingPeriod', 'hqLocation',
-      'scope1Emissions', 'scope2Emissions', 'scope3Emissions',
-      'boardSize', 'sustainabilityCommittee', 'esgTargetsSet',
-    ],
-    'US SEC Climate Disclosure': [
-      'companyName', 'industry', 'reportingPeriod', 'hqLocation',
-      'scope1Emissions', 'scope2Emissions', 'scope3Emissions',
-      'scope1FuelStationaryDetails', 'scope2ElectricityDetails',
-      'governanceInitiatives', 'boardSize', 'sustainabilityCommittee',
-    ],
-    'BRSR': [
-      'companyName', 'industry', 'reportingPeriod', 'hqLocation', 'employeeCount',
-      'totalEmployees', 'genderDiversityPercent', 'safetyIncidents',
-      'scope1Emissions', 'scope2Emissions', 'scope3Emissions',
-      'ethicsPolicy', 'governanceInitiatives',
-    ],
-  };
-
-  const frameworksToShow = source === 'ESG' && esgData
-    ? (Array.isArray(esgData.esgFrameworks) ? esgData.esgFrameworks : [])
-    : [source];
-
-  const frameworkCards = frameworksToShow.map((fw) => {
-    if (source === 'ESG' && esgData) {
-      const frameworkQuestions = reportQuestions.filter((question) =>
-        String(question.framework || '').toLowerCase().includes(String(fw).toLowerCase())
-      );
-      const stats = frameworkQuestions.length
-        ? countCompletion(
-          frameworkQuestions.reduce((answers, question, index) => ({
-            ...answers,
-            [index]: getUserQuestionAnswer(question),
-          }), {}),
-          frameworkQuestions.map((question, index) => String(index))
-        )
-        : countCompletion(esgData, ESG_FRAMEWORK_FIELDS[fw] || []);
-      return { framework: fw, ...stats };
-    }
-    if (source === 'BRSR' && brsrData) {
-      const keys = Object.keys(brsrData || {}).filter((k) => k !== 'esgFrameworks');
-      const stats = countCompletion(brsrData, keys);
-      return { framework: 'BRSR', ...stats };
-    }
-    if (source === 'GRI' && griData) {
-      const flat = {
-        ...(griData.baseFormData || {}),
-        ...(griData.griUniversal || {}),
-        ...(griData.griEconomic || {}),
-        ...(griData.griEnvironmental || {}),
-        ...(griData.griSocial || {}),
-      };
-      const keys = Object.keys(flat || {});
-      const stats = countCompletion(flat, keys);
-      return { framework: 'GRI', ...stats };
-    }
-    const keys = Object.keys(activeData || {});
-    const stats = countCompletion(activeData, keys);
-    return { framework: fw, ...stats };
+  const frameworkCards = selectedFrameworks.map((framework) => {
+    const frameworkQuestions = questions.filter((q) => String(q.framework || '').toLowerCase().includes(String(framework).toLowerCase()));
+    const fieldKeys = FRAMEWORK_FIELDS[framework] || [];
+    const frameworkValues = frameworkQuestions.length ? frameworkQuestions.map(answerFor) : fieldKeys.map((key) => flatData[key]);
+    const total = Math.max(frameworkValues.length, 1);
+    const complete = frameworkValues.filter(isAnswered).length;
+    return { name: framework, total, complete, pending: total - complete, percent: Math.round((complete / total) * 100) };
   });
+  const selectedNames = selectedFrameworks.map((item) => String(item).toLowerCase());
+  const unselected = Object.keys(FRAMEWORK_FIELDS).filter((fw) => !selectedNames.some((name) => name.includes(fw.toLowerCase()) || fw.toLowerCase().includes(name))).slice(0, 3).map((fw) => {
+    const fields = FRAMEWORK_FIELDS[fw];
+    const covered = fields.filter((field) => isAnswered(flatData[field])).length;
+    return { name: fw, covered, total: fields.length, percent: Math.round((covered / fields.length) * 100) };
+  }).sort((a, b) => b.percent - a.percent);
+
+  const envScore = clamp(Math.round(completion * 0.82 + (isAnswered(flatData.scope1Emissions) ? 14 : 0)));
+  const socialScore = clamp(Math.round(completion * 0.78 + (isAnswered(flatData.totalEmployees) ? 12 : 0)));
+  const governanceScore = clamp(Math.round(completion * 0.86 + (isAnswered(flatData.ethicsPolicy) ? 10 : 0)));
+  const maturity = readiness >= 85 ? 'Leader' : readiness >= 70 ? 'Mature' : readiness >= 45 ? 'Developing' : 'Beginner';
+  const missingFields = Object.entries(FRAMEWORK_FIELDS[selectedFrameworks[0]] || []).filter(([, key]) => !isAnswered(flatData[key])).map(([, key]) => key);
+  const gapItems = missingFields.slice(0, 4).map((key, index) => ({ label: key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()), priority: index === 0 ? 'Critical' : index < 3 ? 'Medium' : 'Low' }));
+  if (!gapItems.length) gapItems.push({ label: 'No critical disclosure gaps detected', priority: 'Low' });
+  const metrics = [
+    ['Scope 1 emissions', flatData.scope1Emissions, 'tCO₂e'], ['Scope 2 emissions', flatData.scope2Emissions, 'tCO₂e'],
+    ['Energy consumption', flatData.energyConsumption, 'MWh'], ['Water usage', flatData.waterUsage, 'm³'],
+    ['Waste generated', flatData.wasteGenerated, 't'], ['Employee diversity', flatData.genderDiversityPercent, '%'],
+    ['Safety incidents', flatData.safetyIncidents, ''], ['Board diversity', flatData.independentDirectorsPercent, '%'],
+  ];
+
+  const safeName = String(companyName).replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-');
+  const handlePDF = async () => {
+    try {
+      if (source === 'BRSR') {
+        const blob = await generateBRSRReportPDFFromTemplate(brsrData);
+        downloadBlob(blob, 'application/pdf', `${safeName}-BRSR-Report.pdf`);
+      } else if (source === 'ESG' && questions.length) {
+        const doc = new jsPDF();
+        doc.setFontSize(20); doc.text(`${companyName} ESG Report`, 18, 22);
+        doc.setFontSize(10); doc.text(`Reporting period: ${reportingPeriod} | Readiness: ${readiness}/100`, 18, 31);
+        let y = 43;
+        questions.forEach((q, index) => {
+          const lines = doc.splitTextToSize(`${index + 1}. ${q.question}\nAnswer: ${isAnswered(answerFor(q)) ? answerFor(q) : 'Not disclosed'}`, 174);
+          if (y + lines.length * 5 > 280) { doc.addPage(); y = 20; }
+          doc.text(lines, 18, y); y += lines.length * 5 + 5;
+        });
+        doc.save(`${safeName}-ESG-Report.pdf`);
+      } else {
+        downloadBlob(generateESGReportPDF(flatData), 'application/pdf', `${safeName}-${source}-Report.pdf`);
+      }
+    } catch (error) { console.error(error); alert('The report could not be generated. Please try again.'); }
+  };
+  const exportCSV = (rows, name) => downloadBlob(rows.map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\n'), 'text/csv;charset=utf-8', `${safeName}-${name}.csv`);
 
   return (
-    <div className="final-report-page">
-      <header className="final-hero">
-        <div className="final-hero-main">
-          <div className={`final-compliance-pill ${isCompliant ? 'final-compliance-ok' : 'final-compliance-pending'}`}>
-            <span className="final-compliance-icon">{isCompliant ? '✔' : '⚠'}</span>
-            <div>
-              <div className="final-compliance-label">
-                {source === 'BRSR' ? 'BRSR 2026 Status' : 'Disclosure Status'}
-              </div>
-              <div className="final-compliance-value">
-                {isCompliant ? 'Compliant' : 'In progress'}
-              </div>
-            </div>
-          </div>
-
-          <div className="final-hero-text">
-            <h1>Final Performance Report</h1>
-            <p>
-              At-a-glance view of your sustainability performance and disclosure quality, based on your
-              {' '}
-              {source}
-              {' '}
-              inputs.
-            </p>
-            <div className="final-disclosure-bar">
-              <div className="final-disclosure-header">
-                <span>Total disclosure rate</span>
-                <span className="final-disclosure-percent">
-                  {disclosurePercent}
-                  %
-                </span>
-              </div>
-              <div className="final-disclosure-track">
-                <div
-                  className="final-disclosure-fill"
-                  style={{ width: `${Math.min(disclosurePercent, 100)}%` }}
-                />
-              </div>
-              <p className="final-disclosure-caption">
-                Approximate share of applicable fields completed across your submission.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="final-hero-metrics">
-          <div className="final-metric-card">
-            <div className="final-metric-label">Total carbon footprint</div>
-            <div className="final-metric-value">{carbonFootprint}</div>
-            <div className="final-metric-sub">Scope 1–3 or nearest available estimate</div>
-          </div>
-          <div className="final-metric-card">
-            <div className="final-metric-label">Gender diversity</div>
-            <div className="final-metric-value">{genderDiversity}</div>
-            <div className="final-metric-sub">Women in workforce or qualitative ratio</div>
-          </div>
-          <div className="final-metric-card">
-            <div className="final-metric-label">CSR & community</div>
-            <div className="final-metric-value">{csrSpend}</div>
-            <div className="final-metric-sub">CSR applicability / investments / community spend</div>
-          </div>
-        </div>
+    <main className={`final-report-page ${darkMode ? 'dark' : ''}`}>
+      <header className="fr-topbar">
+        <div><button className="fr-back" onClick={() => history.goBack()} aria-label="Go back">←</button><span className="fr-eyebrow">FINAL REPORT / {reportingPeriod}</span></div>
+        <div className="fr-top-actions"><button className="fr-btn primary" onClick={handlePDF}>Download PDF</button></div>
       </header>
 
-      <section className="final-benchmark-section">
-        <div className="final-radar-card">
-          <h2>Performance vs peers</h2>
-          <p className="final-helper-text">
-            Qualitative benchmarking across Environment, Social and Governance based on your answers and disclosure depth.
-          </p>
-          <div className="final-radar-shell">
-            <div className="final-radar-axes">
-              <span>E</span>
-              <span>S</span>
-              <span>G</span>
-            </div>
-            <div className="final-radar-legend">
-              <span className="final-radar-dot final-radar-you" />
-              Your company
-              <span className="final-radar-dot final-radar-peers" />
-              Indicative peers
-            </div>
-          </div>
-        </div>
-
-        <div className="final-trend-card">
-          <h2>Framework compliance</h2>
-          <p className="final-helper-text">
-            Completion status by framework based on the fields you provided.
-          </p>
-          <div className="final-framework-grid">
-            {frameworkCards.map((card) => (
-              <div className="final-framework-card" key={card.framework}>
-                <div className="final-framework-card-top">
-                  <div className="final-framework-name">{card.framework}</div>
-                  <div className="final-framework-percent">
-                    {card.percent}
-                    %
-                  </div>
-                </div>
-                <div className="final-framework-progress" aria-hidden="true">
-                  <div
-                    className="final-framework-progress-fill"
-                    style={{ width: `${Math.min(Math.max(card.percent, 0), 100)}%` }}
-                  />
-                </div>
-                <div className="final-framework-meta">
-                  <span>
-                    {card.filled}
-                    /
-                    {card.total}
-                    {' '}
-                    fields filled
-                  </span>
-                  <span className="final-framework-remaining">
-                    {card.remaining}
-                    {' '}
-                    remaining
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="final-trend-card">
-          <h2>Trend snapshot</h2>
-          <p className="final-helper-text">
-            High-level view of how your impact is evolving. Historical data can be added to show exact year-on-year trends.
-          </p>
-          <div className="final-trend-placeholder">
-            <div className="final-trend-line" />
-            <div className="final-trend-axis">
-              <span>2024</span>
-              <span>2025</span>
-              <span>2026</span>
-            </div>
-          </div>
-        </div>
+      <section className="fr-hero">
+        <div className="fr-hero-copy"><div className="fr-status-row"><span className={`fr-status ${readiness >= 85 ? 'ready' : ''}`}>{status}</span><span>Version {state.reportVersion || '1.0'}</span><span>Updated by {updatedBy}</span></div><h1 style={{color: "white"}}>{companyName}</h1><p>{industry} · {reportingPeriod} · Created {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p><div className="fr-chips">{selectedFrameworks.map((fw) => <span key={fw}>{fw}</span>)}</div></div>
+        <div className="fr-score-ring" style={{ '--score': readiness }}><div><strong>{readiness}</strong><span>/100</span><small>READINESS</small></div></div>
       </section>
 
-      <section className="final-improvement-section">
-        <div className="final-improvement-card">
-          <h2>Improvement roadmap</h2>
-          <ul className="final-improvements-list">
-            <li>
-              Strengthen
-              {' '}
-              <strong>policy disclosures</strong>
-              {' '}
-              in Module B where NGRBC policy details or ESG targets are brief or missing.
-            </li>
-            <li>
-              Enhance
-              {' '}
-              <strong>quantitative indicators</strong>
-              {' '}
-              in Module C (waste, safety, stakeholder engagement) for clearer benchmarking.
-            </li>
-            <li>
-              Deepen
-              {' '}
-              <strong>risk–financial linkage</strong>
-              {' '}
-              in Module D by connecting each ESG risk to revenue, cost and asset impacts.
-            </li>
-          </ul>
+      <section className="fr-kpi-grid">
+        {[['Questions', totalQuestions, `${answered} answered`], ['Completion', `${completion}%`, `${pending} pending`], ['Framework coverage', `${coverage}%`, `${selectedFrameworks.length} selected`], ['Auto-populated', autoPopulated, `${Math.round(autoPopulated / totalQuestions * 100)}% success rate`], ['Evidence', evidenceCount, 'documents uploaded'], ['Review comments', commentsCount, commentsCount ? 'require attention' : 'all clear'], ['Material topics', materialTopics.length, 'topics covered'], ['Time saved', `${Math.max(4, reused * 2 + autoPopulated)}h`, `${reused} answers reused`]].map(([label, value, note]) => <article className="fr-kpi" key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></article>)}
+      </section>
+
+      <div className="fr-layout">
+        <div className="fr-content">
+          <section className="fr-section" id="frameworks"><div className="fr-section-head"><div><span className="fr-kicker">REPORTING PROGRESS</span><h2>Framework readiness</h2></div><span className="fr-muted">Select a card for details</span></div><div className="fr-framework-grid">{frameworkCards.map((card) => <button key={card.name} className={`fr-framework-card ${openFramework === card.name ? 'open' : ''}`} onClick={() => setOpenFramework(openFramework === card.name ? null : card.name)}><div className="fr-framework-title"><i className={card.percent >= 80 ? 'green' : card.percent >= 50 ? 'amber' : 'red'} /><strong>{card.name}</strong><b>{card.percent}%</b></div><Progress value={card.percent} tone={card.percent >= 80 ? 'green' : card.percent >= 50 ? 'amber' : 'red'} /><div className="fr-framework-meta"><span>{card.complete} answered</span><span>{card.pending} pending</span><span>{card.total} total</span></div>{openFramework === card.name && <div className="fr-framework-detail">Completing {card.pending} remaining disclosures will bring this framework to submission readiness.</div>}</button>)}</div></section>
+
+          <section className="fr-section"><div className="fr-section-head"><div><span className="fr-kicker">SMART MAPPING</span><h2>Cross-framework efficiency</h2></div></div><div className="fr-efficiency"><div className="fr-callout"><span>↗</span><div><strong>{reused + autoPopulated} disclosures reused</strong><p>Answers mapped once and applied wherever frameworks overlap.</p></div></div><div className="fr-mini-stats"><div><strong>{Math.max(4, reused * 2 + autoPopulated)}h</strong><span>estimated time saved</span></div><div><strong>{reused}</strong><span>duplicates eliminated</span></div><div><strong>{Math.round((reused + autoPopulated) / totalQuestions * 100)}%</strong><span>automation achieved</span></div></div></div></section>
+
+          <section className="fr-section"><div className="fr-section-head"><div><span className="fr-kicker">UNLOCK MORE VALUE</span><h2>Coverage you already have</h2></div></div><p className="fr-intro">Your existing answers have already advanced frameworks you did not select.</p><div className="fr-coverage-list">{unselected.map((item) => <div className="fr-coverage-row" key={item.name}><div><strong>{item.name}</strong><span>{item.covered}/{item.total} questions covered</span></div><div className="fr-coverage-progress"><Progress value={item.percent} /><b>{item.percent}%</b></div><button onClick={() => history.push('/')}>Add framework</button></div>)}</div>{unselected[0] && <div className="fr-opportunity">You are already <strong>{unselected[0].percent}% ready</strong> for {unselected[0].name} reporting.</div>}</section>
+
+          <section className="fr-two-col"><article className="fr-section"><span className="fr-kicker">PEER BENCHMARK</span><h2>How you compare</h2><div className="fr-radar"><svg viewBox="0 0 220 180" role="img" aria-label="ESG peer comparison radar"><polygon points="110,12 205,72 170,168 50,168 15,72" className="grid"/><polygon points={`110,${150-envScore*1.25} ${110+socialScore*.85},${86-socialScore*.14} ${110+governanceScore*.62},${98+governanceScore*.68} ${110-governanceScore*.62},${98+governanceScore*.68} ${110-socialScore*.85},${86-socialScore*.14}`} className="company"/><text x="110" y="10">Environmental</text><text x="188" y="68">Social</text><text x="164" y="178">Governance</text><text x="6" y="178">Completion</text><text x="0" y="68">Disclosure</text></svg></div><div className="fr-benchmark-bars">{[['Your score', readiness], ['Industry average', 64], ['Top quartile', 82]].map(([label, score]) => <div key={label}><span>{label}</span><Progress value={score} tone={label === 'Your score' ? 'green' : 'blue'} /><b>{score}</b></div>)}</div><small className="fr-disclaimer">Benchmark is an indicative estimate based on disclosure completeness.</small></article><article className="fr-section"><span className="fr-kicker">MATURITY ASSESSMENT</span><h2>{maturity}</h2><p className="fr-intro">Your organisation demonstrates {maturity.toLowerCase()} ESG reporting capability.</p>{[['Environmental', envScore], ['Social', socialScore], ['Governance', governanceScore]].map(([label, score]) => <div className="fr-score-row" key={label}><span>{label}</span><Progress value={score} /><b>{score}</b></div>)}<div className="fr-maturity-scale"><span>Beginner</span><span>Developing</span><span>Mature</span><span>Leader</span></div></article></section>
+
+          <section className="fr-two-col"><article className="fr-section"><span className="fr-kicker">QUALITY CONTROL</span><h2>General status</h2><div className="fr-status-list">{[['Data quality', pending, pending ? 'Missing data points' : 'Complete'], ['Documentation', evidenceCount, evidenceCount ? 'Evidence uploaded' : 'Evidence pending'], ['Review status', commentsCount, commentsCount ? 'Comments open' : 'Ready for approval']].map(([label, count, text]) => <div key={label}><i className={count ? 'warn' : 'ok'}>{count ? '!' : '✓'}</i><span><strong>{label}</strong><small>{text}</small></span><b>{count}</b></div>)}</div></article><article className="fr-section"><span className="fr-kicker">GAP ANALYSIS</span><h2>Attention required</h2><div className="fr-gap-list">{gapItems.map((gap) => <div key={gap.label}><span className={`fr-priority ${gap.priority.toLowerCase()}`}>{gap.priority}</span><strong>{gap.label}</strong></div>)}</div><button className="fr-text-btn" onClick={() => exportCSV([['Gap', 'Priority'], ...gapItems.map((g) => [g.label, g.priority])], 'gap-analysis')}>Download gap analysis →</button></article></section>
+
+          <section className="fr-section"><div className="fr-section-head"><div><span className="fr-kicker">PERFORMANCE</span><h2>ESG indicators</h2></div></div><div className="fr-metric-table"><div className="fr-table-head"><span>Indicator</span><span>Current year</span><span>Previous year</span><span>Trend</span></div>{metrics.map(([label, value, unit], index) => <div key={label}><strong>{label}</strong><span>{valueOrDash(value, isAnswered(value) && unit ? ` ${unit}` : '')}</span><span>—</span><b className={index < 5 ? 'down' : 'up'}>{isAnswered(value) ? (index < 5 ? '↓ tracked' : '↑ tracked') : 'No data'}</b></div>)}</div></section>
+
+          <section className="fr-section fr-insights"><div className="fr-ai-icon">✦</div><div><span className="fr-kicker">AI-ASSISTED INSIGHTS</span><h2>Your fastest path to submission</h2><p>You are <strong>{frameworkCards[0]?.percent || completion}% ready for {frameworkCards[0]?.name || source}</strong>. {pending ? `Complete the ${pending} pending answers and attach supporting evidence to improve assurance readiness.` : 'All core answers are complete; your next step is evidence review and final approval.'}</p><div className="fr-recommendations"><span>01</span><p><strong>Close high-priority gaps</strong> Start with {gapItems[0].label.toLowerCase()}.</p><span>02</span><p><strong>Strengthen auditability</strong> Upload evidence for every quantitative disclosure.</p><span>03</span><p><strong>Run final review</strong> Resolve {commentsCount} open comments before submission.</p></div></div></section>
+
+          <section className="fr-section"><span className="fr-kicker">MATERIALITY</span><h2>Material topics summary</h2><div className="fr-topic-grid">{materialTopics.map((topic, index) => <div key={topic}><span>0{index + 1}</span><strong>{topic}</strong><small>{selectedFrameworks.slice(0, 3).join(' · ')}</small><b>SDG {index === 0 ? '13' : index === 1 ? '8' : '16'}</b></div>)}</div></section>
+
+          <section className="fr-section"><span className="fr-kicker">AUDIT TRAIL</span><h2>Recent activity</h2><div className="fr-timeline">{[['Report data consolidated', 'Today', 'System'], ['Framework mapping refreshed', 'Today', 'Auto-mapping engine'], ['Readiness assessment generated', 'Today', updatedBy], ['Draft report created', reportingPeriod, updatedBy]].map(([event, time, actor]) => <div key={event}><i /><span><strong>{event}</strong><small>{actor}</small></span><time>{time}</time></div>)}</div></section>
         </div>
 
-        <div className="final-improvement-card">
-          <h3>Gap finder (leadership indicators)</h3>
-          <p className="final-helper-text">
-            Focus areas where responses are blank or high-level. Filling these out helps you move from
-            compliance to leadership.
-          </p>
-          <ul className="final-gap-list">
-            {source === 'BRSR' && !brsrData.envRD && (
-              <li>Environmental R&amp;D initiatives (Module C) could be described in more detail.</li>
-            )}
-            {source === 'BRSR' && !brsrData.stakeholderEngagement && (
-              <li>Engagement with marginalized/vulnerable stakeholders (Module C) is missing.</li>
-            )}
-            {source === 'BRSR' && !brsrData.riskMitigationPlans && (
-              <li>Mitigation plans &amp; timelines for key ESG risks (Module D) are not fully captured.</li>
-            )}
-            {disclosurePercent === 100 && (
-              <li>All core indicators are filled. Focus on depth, narrative quality, and supporting evidence.</li>
-            )}
-          </ul>
-          <div className="final-advice">
-            <strong>Example advisory insight:</strong>
-            {' '}
-            Your water recycling or circularity-related disclosures appear limited. Many peers target
-            higher reuse rates under Principle 6 – consider policies like rainwater harvesting or grey
-            water reuse to strengthen performance.
-          </div>
-        </div>
-      </section>
+        <aside className="fr-sidebar"><div className="fr-side-card readiness"><span>SUBMISSION READINESS</span><div className="fr-side-score">{readiness}<small>/100</small></div>{[['Data completion', completion], ['Evidence availability', clamp(evidenceCount * 12)], ['Framework coverage', coverage], ['Data quality', clamp(100 - pending * 3)], ['Review status', commentsCount ? 65 : 100]].map(([label, score]) => <div className="fr-side-progress" key={label}><span>{label}<b>{score}%</b></span><Progress value={score} /></div>)}<p>{readiness >= 85 ? 'Ready for final approval and submission.' : `${100-readiness} points to submission-ready.`}</p></div><nav className="fr-side-card"><span>REPORT SECTIONS</span>{['Frameworks', 'Coverage', 'Benchmark', 'Gap analysis', 'Performance', 'Insights', 'Audit trail'].map((item, index) => <a href={`#${index === 0 ? 'frameworks' : ''}`} key={item}><i>{index + 1}</i>{item}</a>)}</nav><div className="fr-side-card forecast"><span>READINESS FORECAST</span><strong>{pending ? `${Math.max(1, Math.ceil(pending / 8))} days` : 'Ready now'}</strong><p>At your current completion pace.</p></div></aside>
+      </div>
 
-      <section className="final-grid-section" hidden>
-        <h2>Data grid – module breakdown</h2>
-        <p className="final-helper-text">
-          Explore the key values that feed into your final report. Search by keyword and expand modules
-          to review entries before exporting the official PDF.
-        </p>
-        <input
-          type="text"
-          className="final-grid-search"
-          placeholder="Search fields (e.g. waste, governance, Principle 6)..."
-          onChange={() => {}}
-        />
-        <div className="final-grid-table">
-          {source === 'BRSR' && brsrData && (
-          <>
-            <div className="final-grid-row final-grid-header">
-              <span>Module</span>
-              <span>Field</span>
-              <span>Value</span>
-              <span>Status</span>
-            </div>
-            <div className="final-grid-row">
-              <span>A – General</span>
-              <span>Company name</span>
-              <span>{brsrData.companyName || 'N/A'}</span>
-              <span className="final-grid-status final-grid-unverified">● Not verified</span>
-            </div>
-            <div className="final-grid-row">
-              <span>A – General</span>
-              <span>Net worth</span>
-              <span>{brsrData.netWorth || 'N/A'}</span>
-              <span className="final-grid-status final-grid-unverified">● Not verified</span>
-            </div>
-            <div className="final-grid-row">
-              <span>C – Performance</span>
-              <span>Plastic waste generated &amp; treated</span>
-              <span>{brsrData.plasticWaste || 'N/A'}</span>
-              <span className="final-grid-status final-grid-unverified">● Not verified</span>
-            </div>
-            <div className="final-grid-row">
-              <span>D – Risk</span>
-              <span>Key ESG risks</span>
-              <span>{brsrData.keyRisks || 'N/A'}</span>
-              <span className="final-grid-status final-grid-unverified">● Not verified</span>
-            </div>
-          </>
-          )}
-        </div>
-      </section>
-
-      {source === 'ESG' && Array.isArray(visibleQuestions) && (
-        <section className="final-report-details" hidden>
-          <h2>ESG questionnaire responses</h2>
-          <div className="final-question-list">
-            {visibleQuestions.map((question) => {
-              const mappedAnswer = getAnswer(reportAnswers, question.id);
-              const answer = isAnswered(mappedAnswer) ? mappedAnswer : (question.answer ?? '');
-              if (!isAnswered(answer)) console.warn(`No answer found for question ${question.id}`);
-              return (
-                <article className="final-question-card" key={String(question.id)}>
-                  <div className="final-question-heading">
-                    <strong>{question.question || `Question ${question.id}`}</strong>
-                    <span>{question.framework || 'General'}</span>
-                  </div>
-                  <p>{isAnswered(answer) ? displayAnswer(answer) : 'Not answered'}</p>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      <section className="final-report-details" hidden>
-        {source === 'BRSR' && (
-        <>
-          <h2>Detailed BRSR data (SEBI-aligned modules)</h2>
-
-          <div className="final-detail-card">
-            <h3>Module A · General Disclosures</h3>
-          <dl>
-            <div>
-              <dt>Company name</dt>
-              <dd>{brsrData.companyName || 'N/A'}</dd>
-            </div>
-            <div>
-              <dt>CIN</dt>
-              <dd>{brsrData.cin || 'N/A'}</dd>
-            </div>
-            <div>
-              <dt>Registered address</dt>
-              <dd>{brsrData.registeredAddress || 'N/A'}</dd>
-            </div>
-            <div>
-              <dt>Stock exchanges</dt>
-              <dd>{brsrData.stockExchanges || 'N/A'}</dd>
-            </div>
-            <div>
-              <dt>Plant & office locations</dt>
-              <dd>{brsrData.plantLocations || 'N/A'}</dd>
-            </div>
-            <div>
-              <dt>Activities covering ~90% of turnover</dt>
-              <dd>{brsrData.keyActivities90Turnover || 'N/A'}</dd>
-            </div>
-          </dl>
-          </div>
-
-          <div className="final-detail-card">
-            <h3>Module B · Management & Process</h3>
-          <dl>
-            <div>
-              <dt>NGRBC policy status (Principles 1–9)</dt>
-              <dd>{brsrData.ngrbcPoliciesStatus || 'N/A'}</dd>
-            </div>
-            <div>
-              <dt>Policy owners / highest authority</dt>
-              <dd>{brsrData.policyOwners || 'N/A'}</dd>
-            </div>
-            <div>
-              <dt>Key ESG goals & annual targets</dt>
-              <dd>{brsrData.esgGoalsTargets || 'N/A'}</dd>
-            </div>
-          </dl>
-          </div>
-
-          <div className="final-detail-card">
-            <h3>Module C · Principle-wise Performance</h3>
-          <dl>
-            <div>
-              <dt>Corruption & bribery cases</dt>
-              <dd>{brsrData.corruptionCases || 'N/A'}</dd>
-            </div>
-            <div>
-              <dt>Fines / penalties</dt>
-              <dd>{brsrData.corruptionFines || 'N/A'}</dd>
-            </div>
-            <div>
-              <dt>Sustainable sourcing</dt>
-              <dd>{brsrData.sustainableSourcing || 'N/A'}</dd>
-            </div>
-            <div>
-              <dt>Environmental R&D</dt>
-              <dd>{brsrData.envRD || 'N/A'}</dd>
-            </div>
-            <div>
-              <dt>Plastic waste</dt>
-              <dd>{brsrData.plasticWaste || 'N/A'}</dd>
-            </div>
-            <div>
-              <dt>E-waste</dt>
-              <dd>{brsrData.eWaste || 'N/A'}</dd>
-            </div>
-            <div>
-              <dt>Hazardous waste</dt>
-              <dd>{brsrData.hazardousWaste || 'N/A'}</dd>
-            </div>
-            <div>
-              <dt>Minimum wage compliance</dt>
-              <dd>{brsrData.minWageCompliance || 'N/A'}</dd>
-            </div>
-            <div>
-              <dt>Average training hours</dt>
-              <dd>{brsrData.avgTrainingHours || 'N/A'}</dd>
-            </div>
-            <div>
-              <dt>Safety incidents</dt>
-              <dd>{brsrData.safetyIncidents || 'N/A'}</dd>
-            </div>
-            <div>
-              <dt>Worker grievances</dt>
-              <dd>{brsrData.workerGrievances || 'N/A'}</dd>
-            </div>
-            <div>
-              <dt>Average grievance resolution time</dt>
-              <dd>{brsrData.grievanceResolutionTime || 'N/A'}</dd>
-            </div>
-            <div>
-              <dt>Engagement with marginalized / vulnerable stakeholders</dt>
-              <dd>{brsrData.stakeholderEngagement || 'N/A'}</dd>
-            </div>
-          </dl>
-          </div>
-
-          <div className="final-detail-card">
-            <h3>Module D · Materiality & Risk</h3>
-          <dl>
-            <div>
-              <dt>Key environmental & social risks</dt>
-              <dd>{brsrData.keyRisks || 'N/A'}</dd>
-            </div>
-            <div>
-              <dt>Link to financial impact</dt>
-              <dd>{brsrData.riskFinancialImpact || 'N/A'}</dd>
-            </div>
-            <div>
-              <dt>Mitigation plans & timelines</dt>
-              <dd>{brsrData.riskMitigationPlans || 'N/A'}</dd>
-            </div>
-          </dl>
-          </div>
-        </>
-        )}
-
-        {source === 'GRI' && griData && (
-        <>
-          <h2>GRI company details (summary)</h2>
-          <div className="final-detail-card">
-            <h3>Universal standards</h3>
-            <dl>
-              <div>
-                <dt>Legal structure</dt>
-                <dd>{(griData.griUniversal && griData.griUniversal.companyLegalStructure) || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt>Headquarters location</dt>
-                <dd>{(griData.griUniversal && griData.griUniversal.headquartersLocation) || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt>Operational regions</dt>
-                <dd>{(griData.griUniversal && griData.griUniversal.operationalRegions) || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt>Nature of business</dt>
-                <dd>{(griData.griUniversal && griData.griUniversal.natureOfBusiness) || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt>Supply chain</dt>
-                <dd>{(griData.griUniversal && griData.griUniversal.supplyChainDetails) || 'N/A'}</dd>
-              </div>
-            </dl>
-          </div>
-
-          <div className="final-detail-card">
-            <h3>Economic, environmental & social (high level)</h3>
-            <dl>
-              <div>
-                <dt>Revenue & profits</dt>
-                <dd>{(griData.griEconomic && griData.griEconomic.revenueAndProfits) || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt>Key environmental overview</dt>
-                <dd>{(griData.griEnvironmental && griData.griEnvironmental.ghgEmissionsOverview) || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt>Total waste generated</dt>
-                <dd>{(griData.griEnvironmental && griData.griEnvironmental.totalWasteGenerated) || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt>Workforce & turnover</dt>
-                <dd>
-                  {(griData.griSocial && griData.griSocial.totalWorkforce) || 'N/A'}
-                  {' | Turnover: '}
-                  {(griData.griSocial && griData.griSocial.employeeTurnoverRates) || 'N/A'}
-                </dd>
-              </div>
-            </dl>
-          </div>
-        </>
-        )}
-
-        {source === 'ESG' && esgData && (
-        <>
-          <h2>ESG metrics summary</h2>
-          <div className="final-detail-card">
-            <h3>Environmental</h3>
-            <dl>
-              <div>
-                <dt>Scope 1 emissions</dt>
-                <dd>{esgData.scope1Emissions || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt>Scope 2 emissions</dt>
-                <dd>{esgData.scope2Emissions || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt>Scope 3 emissions</dt>
-                <dd>{esgData.scope3Emissions || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt>Energy consumption</dt>
-                <dd>{esgData.energyConsumption || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt>Renewable energy %</dt>
-                <dd>{esgData.renewableEnergyPercent || 'N/A'}</dd>
-              </div>
-            </dl>
-          </div>
-
-          <div className="final-detail-card">
-            <h3>Social & governance</h3>
-            <dl>
-              <div>
-                <dt>Total employees</dt>
-                <dd>{esgData.totalEmployees || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt>Gender diversity %</dt>
-                <dd>{esgData.genderDiversityPercent || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt>Board size</dt>
-                <dd>{esgData.boardSize || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt>Independent directors %</dt>
-                <dd>{esgData.independentDirectorsPercent || 'N/A'}</dd>
-              </div>
-            </dl>
-          </div>
-        </>
-        )}
-      </section>
-
-      <section className="final-report-actions">
-        <button
-          type="button"
-          className="btn btn-secondary"
-          onClick={() => history.push(source === 'BRSR' ? '/brsr' : '/')}
-        >
-          {source === 'BRSR' ? 'Back to BRSR form' : 'Back to home'}
-        </button>
-        {source === 'BRSR' && (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={handleOpenBRSRHTML}
-            style={{ marginLeft: 12 }}
-          >
-            View Official BRSR (HTML)
-          </button>
-        )}
-        <button
-          type="button"
-          className="btn btn-primary btn-lg final-big-green-button"
-          onClick={handleDownloadPDF}
-          style={{position: 'fixed',
-            bottom: '100px',
-            right: '50px',
-            width: '157px',
-            fontSize: '12px',
-            height: '70px'}}
-        >
-          {source === 'BRSR' ? 'Generate Official SEBI-Compliant BRSR' : 'Download Report PDF'}
-        </button>
-      </section>
-    </div>
+      <section className="fr-export"><div><span className="fr-kicker">YOUR REPORT IS ALMOST THERE</span><h2 style={{color: "white"}}>Export and share</h2><p>Generate board-ready outputs or hand off structured data for assurance.</p></div><div className="fr-export-actions"><button className="fr-btn primary" onClick={handlePDF}>Download PDF report</button></div></section>
+    </main>
   );
 };
 
 export default FinalReportPage;
-
