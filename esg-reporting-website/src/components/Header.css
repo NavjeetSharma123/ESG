@@ -23,9 +23,10 @@
 }
 
 .site-header__logo-mark {
-  width: 1.5rem;
-  height: 1.5rem;
-  background: var(--color-accent);
+  width: 2.5rem;
+  height: 2.5rem;
+  background: transparent;
+  padding-top:4px;
   border-radius: var(--radius-sm);
 }
 

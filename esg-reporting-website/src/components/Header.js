@@ -24,7 +24,7 @@ const Header = () => {
     <header className="site-header">
       <Container className="site-header__inner">
         <Link to="/" className="site-header__logo" aria-label="ESG Reporting — Home">
-          <span className="site-header__logo-mark" aria-hidden="true" />
+          <span className="site-header__logo-mark" aria-hidden="true"><img src="logo.png" alt="Icon"/></span>
           <span className="site-header__logo-text">ESG Reporting</span>
         </Link>
 
