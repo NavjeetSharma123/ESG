@@ -3,7 +3,7 @@ import { useHistory, useLocation } from 'react-router-dom';
 import './ESGReportForm.css';
 import {
   getAnswer, getLinkedQuestionIds, isAnswered, loadESGDraft,
-  normalizeQuestionId, propagateLinkedAnswer, saveESGAnswers,
+  normalizeQuestionId, propagateLinkedAnswer, questionMatchesSector, saveESGAnswers,
 } from '../utils/answerManagement';
 
 const COUNTRY_FRAMEWORKS = {
@@ -66,8 +66,7 @@ const questionMatchesCompanyInfo = (question, industry, frameworks) => {
   const matchesSector =
     !hasSector
     || !questionSector
-    || questionSector.toLowerCase() === sector.toLowerCase()
-    || questionSector === 'Other';
+    || questionMatchesSector(question, sector);
   const matchesFramework =
     !hasFrameworks
     || !question.framework

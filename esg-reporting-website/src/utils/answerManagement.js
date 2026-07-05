@@ -2,6 +2,22 @@ export const ESG_DRAFT_KEY = 'esg-report-draft-v1';
 
 export const normalizeQuestionId = (id) => String(id ?? '').trim();
 
+export const getQuestionSectors = (question) => {
+  const raw = question && question.sector;
+  if (Array.isArray(raw)) return raw.map((sector) => String(sector).trim()).filter(Boolean);
+  return String(raw || '').split(',').map((sector) => sector.trim()).filter(Boolean);
+};
+
+export const questionMatchesSector = (question, sector) => {
+  if (!sector) return true;
+  const normalizedSector = String(sector).trim().toLowerCase();
+  const questionSectors = getQuestionSectors(question);
+  return questionSectors.length === 0 || questionSectors.some((item) => {
+    const normalizedItem = item.toLowerCase();
+    return normalizedItem === normalizedSector || normalizedItem === 'other';
+  });
+};
+
 export const getLinkedQuestionIds = (question) => {
   const raw = question && (question.linkedQuestionIds ?? question.linkedquestions);
   if (Array.isArray(raw)) return raw.map(normalizeQuestionId).filter(Boolean);
