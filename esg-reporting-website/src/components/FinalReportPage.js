@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
-import { jsPDF } from 'jspdf';
 import { generateBRSRReportPDFFromTemplate, generateESGReportPDF } from '../utils/reportGenerator';
 import { getAnswer, isAnswered, loadESGDraft } from '../utils/answerManagement';
+import { buildDisclosureHierarchy, generateInvestorESGReportPDF } from './reportTemplates/InvestorESGReportPdfTemplate';
 import './FinalReportPage.css';
 
 const FRAMEWORK_FIELDS = {
@@ -64,6 +64,7 @@ const FinalReportPage = () => {
   const completion = Math.round((answered / totalQuestions) * 100);
   const companyName = flatData.companyName || 'Your organisation';
   const selectedFrameworks = source === 'ESG' && Array.isArray(esgData.esgFrameworks) && esgData.esgFrameworks.length ? esgData.esgFrameworks : [source];
+  const disclosureGroups = buildDisclosureHierarchy(questions, selectedFrameworks);
   const industry = flatData.industry || flatData.sector || 'Industry not specified';
   const reportingPeriod = flatData.reportingPeriod || flatData.financialYear || 'Current reporting period';
   const updatedBy = state.lastUpdatedBy || 'ESG Reporting Team';
@@ -112,14 +113,29 @@ const FinalReportPage = () => {
         const blob = await generateBRSRReportPDFFromTemplate(brsrData);
         downloadBlob(blob, 'application/pdf', `${safeName}-BRSR-Report.pdf`);
       } else if (source === 'ESG' && questions.length) {
-        const doc = new jsPDF();
-        doc.setFontSize(20); doc.text(`${companyName} ESG Report`, 18, 22);
-        doc.setFontSize(10); doc.text(`Reporting period: ${reportingPeriod} | Readiness: ${readiness}/100`, 18, 31);
-        let y = 43;
-        questions.forEach((q, index) => {
-          const lines = doc.splitTextToSize(`${index + 1}. ${q.question}\nAnswer: ${isAnswered(answerFor(q)) ? answerFor(q) : 'Not disclosed'}`, 174);
-          if (y + lines.length * 5 > 280) { doc.addPage(); y = 20; }
-          doc.text(lines, 18, y); y += lines.length * 5 + 5;
+        const doc = generateInvestorESGReportPDF({
+          companyName,
+          industry,
+          reportingPeriod,
+          readiness,
+          groups: disclosureGroups,
+          answerFor,
+          visualData: {
+            completion,
+            coverage,
+            answered,
+            pending,
+            totalQuestions,
+            evidenceCount,
+            commentsCount,
+            autoPopulated,
+            reused,
+            frameworkCards,
+            envScore,
+            socialScore,
+            governanceScore,
+            maturity,
+          },
         });
         doc.save(`${safeName}-ESG-Report.pdf`);
       } else {
@@ -155,7 +171,7 @@ const FinalReportPage = () => {
 
           <section className="fr-two-col"><article className="fr-section"><span className="fr-kicker">PEER BENCHMARK</span><h2>How you compare</h2><div className="fr-radar"><svg viewBox="0 0 220 180" role="img" aria-label="ESG peer comparison radar"><polygon points="110,12 205,72 170,168 50,168 15,72" className="grid"/><polygon points={`110,${150-envScore*1.25} ${110+socialScore*.85},${86-socialScore*.14} ${110+governanceScore*.62},${98+governanceScore*.68} ${110-governanceScore*.62},${98+governanceScore*.68} ${110-socialScore*.85},${86-socialScore*.14}`} className="company"/><text x="110" y="10">Environmental</text><text x="188" y="68">Social</text><text x="164" y="178">Governance</text><text x="6" y="178">Completion</text><text x="0" y="68">Disclosure</text></svg></div><div className="fr-benchmark-bars">{[['Your score', readiness], ['Industry average', 64], ['Top quartile', 82]].map(([label, score]) => <div key={label}><span>{label}</span><Progress value={score} tone={label === 'Your score' ? 'green' : 'blue'} /><b>{score}</b></div>)}</div><small className="fr-disclaimer">Benchmark is an indicative estimate based on disclosure completeness.</small></article><article className="fr-section"><span className="fr-kicker">MATURITY ASSESSMENT</span><h2>{maturity}</h2><p className="fr-intro">Your organisation demonstrates {maturity.toLowerCase()} ESG reporting capability.</p>{[['Environmental', envScore], ['Social', socialScore], ['Governance', governanceScore]].map(([label, score]) => <div className="fr-score-row" key={label}><span>{label}</span><Progress value={score} /><b>{score}</b></div>)}<div className="fr-maturity-scale"><span>Beginner</span><span>Developing</span><span>Mature</span><span>Leader</span></div></article></section>
 
-          <section className="fr-two-col"><article className="fr-section"><span className="fr-kicker">QUALITY CONTROL</span><h2>General status</h2><div className="fr-status-list">{[['Data quality', pending, pending ? 'Missing data points' : 'Complete'], ['Documentation', evidenceCount, evidenceCount ? 'Evidence uploaded' : 'Evidence pending'], ['Review status', commentsCount, commentsCount ? 'Comments open' : 'Ready for approval']].map(([label, count, text]) => <div key={label}><i className={count ? 'warn' : 'ok'}>{count ? '!' : '✓'}</i><span><strong>{label}</strong><small>{text}</small></span><b>{count}</b></div>)}</div></article><article className="fr-section"><span className="fr-kicker">GAP ANALYSIS</span><h2>Attention required</h2><div className="fr-gap-list">{gapItems.map((gap) => <div key={gap.label}><span className={`fr-priority ${gap.priority.toLowerCase()}`}>{gap.priority}</span><strong>{gap.label}</strong></div>)}</div><button className="fr-text-btn" onClick={() => exportCSV([['Gap', 'Priority'], ...gapItems.map((g) => [g.label, g.priority])], 'gap-analysis')}>Download gap analysis →</button></article></section>
+          <section className="fr-two-col"><article className="fr-section"><span className="fr-kicker">QUALITY CONTROL</span><h2>General status</h2><div className="fr-status-list">{[['Data quality', pending, pending ? 'Missing data points' : 'Complete'], ['Documentation', evidenceCount, evidenceCount ? 'Evidence uploaded' : 'Evidence pending'], ['Review status', commentsCount, commentsCount ? 'Comments open' : 'Ready for approval']].map(([label, count, text]) => <div key={label}><i className={count ? 'warn' : 'ok'}>{count ? '!' : '✓'}</i><span><strong>{label}</strong><small>{text}</small></span><b>{count}</b></div>)}</div></article><article className="fr-section"><span className="fr-kicker">GAP ANALYSIS</span><h2>Attention required</h2><div className="fr-gap-list">{gapItems.map((gap) => <div key={gap.label}><span className={`fr-priority ${gap.priority.toLowerCase()}`}>{gap.priority}</span><strong>{gap.label}</strong></div>)}</div></article></section>
 
           <section className="fr-section"><div className="fr-section-head"><div><span className="fr-kicker">PERFORMANCE</span><h2>ESG indicators</h2></div></div><div className="fr-metric-table"><div className="fr-table-head"><span>Indicator</span><span>Current year</span><span>Previous year</span><span>Trend</span></div>{metrics.map(([label, value, unit], index) => <div key={label}><strong>{label}</strong><span>{valueOrDash(value, isAnswered(value) && unit ? ` ${unit}` : '')}</span><span>—</span><b className={index < 5 ? 'down' : 'up'}>{isAnswered(value) ? (index < 5 ? '↓ tracked' : '↑ tracked') : 'No data'}</b></div>)}</div></section>
 
