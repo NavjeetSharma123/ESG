@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useHistory, useLocation } from 'react-router-dom';
 import { mainNav } from '../data/navigation';
 import Button from './ui/Button';
 import Container from './ui/Container';
+import { getAuthSession, isAuthenticated, logout } from '../utils/auth';
 import './Header.css';
 
 const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
+  const history = useHistory();
+  const session = getAuthSession();
+  const loggedIn = isAuthenticated();
 
   useEffect(() => {
     setMenuOpen(false);
@@ -19,6 +23,11 @@ const Header = () => {
       document.body.style.overflow = '';
     };
   }, [menuOpen]);
+
+  const handleLogout = () => {
+    logout();
+    history.push('/login');
+  };
 
   return (
     <header className="site-header">
@@ -47,9 +56,18 @@ const Header = () => {
           <Button as={Link} to="/demo" variant="ghost" className="site-header__demo-link">
             Contact
           </Button>
-          <Button as={Link} to="/esg-report" variant="primary" size="sm">
-            Start report
-          </Button>
+          {loggedIn ? (
+            <>
+              <span className="site-header__user">{session.displayName}</span>
+              <Button type="button" variant="ghost" size="sm" onClick={handleLogout}>
+                Logout
+              </Button>
+            </>
+          ) : (
+            <Button as={Link} to="/login" variant="primary" size="sm">
+              Login
+            </Button>
+          )}
         </div>
 
         <button
@@ -83,9 +101,15 @@ const Header = () => {
               </li>
             ))}
             <li className="site-header__mobile-cta">
-              <Button as={Link} to="/esg-report" variant="primary" className="site-header__mobile-btn">
-                Start report
-              </Button>
+              {loggedIn ? (
+                <Button type="button" variant="primary" className="site-header__mobile-btn" onClick={handleLogout}>
+                  Logout
+                </Button>
+              ) : (
+                <Button as={Link} to="/login" variant="primary" className="site-header__mobile-btn">
+                  Login
+                </Button>
+              )}
             </li>
           </ul>
         </Container>

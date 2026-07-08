@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Route, Switch, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Redirect, Route, Switch, useLocation } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import HomePage from './components/HomePage';
 import Services from './components/Services';
 import DemoForm from './components/DemoForm';
+import LoginPage from './components/LoginPage';
 import ESGReportForm from './components/ESGReportForm';
 import GRIDetailsForm from './components/GRIDetailsForm';
 import BRSRPage from './components/BRSRPage';
@@ -12,6 +13,7 @@ import FinalReportPage from './components/FinalReportPage';
 import ESGReportResult from './components/ESGReportResult';
 import CompaniesPage from './components/CompaniesPage';
 import MSCIReadiness from './components/MSCIReadiness';
+import { isAuthenticated } from './utils/auth';
 import './assets/styles.css';
 
 function ScrollToTopOnRouteChange() {
@@ -21,6 +23,17 @@ function ScrollToTopOnRouteChange() {
   }, [pathname]);
   return null;
 }
+
+const ProtectedRoute = ({ component: Component, ...rest }) => (
+  <Route
+    {...rest}
+    render={(props) => (
+      isAuthenticated()
+        ? <Component {...props} />
+        : <Redirect to={{ pathname: '/login', state: { from: props.location.pathname } }} />
+    )}
+  />
+);
 
 function App() {
   return (
@@ -34,9 +47,10 @@ function App() {
             <Route path="/services" component={Services} />
             <Route path="/companies" component={CompaniesPage} />
             <Route path="/demo" component={DemoForm} />
-            <Route path="/esg-report" component={ESGReportForm} />
-            <Route path="/brsr" component={BRSRPage} />
-            <Route path="/final-report" component={FinalReportPage} />
+            <Route path="/login" component={LoginPage} />
+            <ProtectedRoute path="/esg-report" component={ESGReportForm} />
+            <ProtectedRoute path="/brsr" component={BRSRPage} />
+            <ProtectedRoute path="/final-report" component={FinalReportPage} />
           </Switch>
         </main>
         <Footer />

@@ -414,7 +414,7 @@ export const generateInvestorESGReportPDF = ({
   const cardWidth = (contentWidth - cardGap * 2) / 3;
   metricCard(margin, y, cardWidth, 'Readiness', `${Math.round(Number(readiness) || 0)}/100`, 'Indicative reporting readiness');
   metricCard(margin + cardWidth + cardGap, y, cardWidth, 'Frameworks', String(groups.length), 'Framework groups included');
-  metricCard(margin + (cardWidth + cardGap) * 2, y, cardWidth, 'Visible IDs', String(disclosureCount), 'Questions included in this PDF');
+  //metricCard(margin + (cardWidth + cardGap) * 2, y, cardWidth, 'Visible IDs', String(disclosureCount), 'Questions included in this PDF');
   y += 39;
 
   sectionTitle('Contents', 'Navigation');

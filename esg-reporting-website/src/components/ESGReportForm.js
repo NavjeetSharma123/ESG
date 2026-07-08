@@ -26,6 +26,37 @@ const ALL_FRAMEWORKS = [
   'BRSR',
 ];
 
+const SUPPORTING_DOCUMENTS = [
+  { key: 'financialStatements', label: 'Financial Statements' },
+  { key: 'electricityBills', label: 'Electricity Bills' },
+  { key: 'fuelInvoices', label: 'Fuel Invoices' },
+  { key: 'waterBills', label: 'Water Bills' },
+  { key: 'wasteDisposalRecords', label: 'Waste Disposal Records' },
+  { key: 'employeeRegister', label: 'Employee Register' },
+  { key: 'payrollRegister', label: 'Payroll Register' },
+  { key: 'healthSafetyRegister', label: 'Health & Safety Register' },
+  { key: 'supplierList', label: 'Supplier List' },
+  { key: 'companyPolicies', label: 'Company Policies (HR, Ethics, Anti-Harassment)' },
+  { key: 'managementMeetingMinutes', label: 'Management Meeting Minutes' },
+  { key: 'esgCsrEvidence', label: 'ESG/CSR Activities Evidence (photos, invoices, receipts)' },
+  { key: 'isoCertificates', label: 'ISO Certificates (if applicable)' },
+];
+
+const FILE_ACCEPT_TYPES = '.pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.webp';
+
+const fileToDocumentMeta = (file) => ({
+  name: file.name,
+  size: file.size,
+  type: file.type,
+  lastModified: file.lastModified,
+});
+
+const formatFileSize = (bytes) => {
+  if (!bytes) return '0 KB';
+  if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
 
 const getFrameworksForCountry = (country) => {
   if (!country) return [];
@@ -125,6 +156,7 @@ const ESGReportForm = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
   const [selectedDepartments, setSelectedDepartments] = useState([]);
+  const [supportingDocuments, setSupportingDocuments] = useState({});
 
   const handleQuestionAnswer = (id, value) => {
     const normalizedId = normalizeQuestionId(id);
@@ -462,6 +494,7 @@ const ESGReportForm = () => {
     if (!draft) return;
     setFormData((prev) => ({ ...prev, ...(draft.esgData || draft.formData || {}) }));
     setQuestionAnswers(draft.questionAnswers || draft.answers || {});
+    setSupportingDocuments(draft.supportingDocuments || {});
     setLastSaved(draft.savedAt ? new Date(draft.savedAt) : null);
   }, [presetCompany]);
   const hasFramework = (fw) => Array.isArray(formData.esgFrameworks) && formData.esgFrameworks.some((f) => f.includes(fw)); // check substring match
@@ -746,6 +779,10 @@ const ESGReportForm = () => {
     return Math.round(((completed + completedQuestions) / total) * 100);
   }, [formData, progressFieldKeys, applicableQuestions, questionAnswers]);
 
+  const supportingDocumentsCount = useMemo(() => (
+    Object.values(supportingDocuments).reduce((count, files) => count + (Array.isArray(files) ? files.length : 0), 0)
+  ), [supportingDocuments]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => {
@@ -770,11 +807,19 @@ const ESGReportForm = () => {
     setHasUnsavedChanges(true);
   };
 
+  const handleSupportingDocumentChange = (key, fileList) => {
+    const files = Array.from(fileList || []).map(fileToDocumentMeta);
+    setSupportingDocuments((prev) => ({ ...prev, [key]: files }));
+    setHasUnsavedChanges(true);
+    setSaveError('');
+  };
+
   const handleSaveProgress = async () => {
     if (saving) return true;
     setSaving(true); setSaveError('');
     try {
       await saveESGAnswers({ source: 'ESG', esgData: formData, questionAnswers,
+        supportingDocuments, supportingDocumentsCount,
         visibleQuestions: applicableQuestions.map((q) => buildQuestionWithAnswer(q, questionAnswers)) });
       setLastSaved(new Date()); setHasUnsavedChanges(false); return true;
     } catch (error) {
@@ -809,6 +854,8 @@ const ESGReportForm = () => {
         source: 'ESG',
         esgData: formData,
         reportAnswers: questionAnswers,
+        supportingDocuments,
+        supportingDocumentsCount,
         visibleQuestions: answeredQuestions,
       },
     });
@@ -1003,6 +1050,45 @@ const ESGReportForm = () => {
           </div>
         </section>
 
+        <section className="form-section documents-section">
+          <div className="documents-section-head">
+            <div>
+              <h2>Supporting Documents</h2>
+              <p>Upload evidence files for audit readiness. Multiple files are allowed for each document type.</p>
+            </div>
+            <span>{supportingDocumentsCount} uploaded</span>
+          </div>
+          <div className="document-upload-grid">
+            {SUPPORTING_DOCUMENTS.map((documentType) => {
+              const uploadedFiles = supportingDocuments[documentType.key] || [];
+              return (
+                <div className="document-upload-card" key={documentType.key}>
+                  <label htmlFor={`doc-${documentType.key}`}>{documentType.label}</label>
+                  <input
+                    id={`doc-${documentType.key}`}
+                    type="file"
+                    multiple
+                    accept={FILE_ACCEPT_TYPES}
+                    onChange={(event) => handleSupportingDocumentChange(documentType.key, event.target.files)}
+                  />
+                  {uploadedFiles.length > 0 ? (
+                    <ul className="document-file-list">
+                      {uploadedFiles.map((file) => (
+                        <li key={`${file.name}-${file.lastModified}`}>
+                          <span>{file.name}</span>
+                          <small>{formatFileSize(file.size)}</small>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <small className="document-empty">No file selected</small>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
         <section className="form-section questions-section">
           <h2>ESG Question Bank</h2>
           <p className="questions-intro">
@@ -1093,7 +1179,7 @@ const ESGReportForm = () => {
                               <tr key={q.id} className={(q.required || q.isMandatory || q.mandatory) && showValidation && !isAnswered(getAnswer(questionAnswers, q.id)) ? 'question-missing' : ''}>
                                 <td>
                                   <div className="question-item">
-                                    <p className="question-text">{q.question} <span class="tooltip">🛈
+                                    <p className="question-text">{q.question} <span className="tooltip">🛈
                                       <span className="tooltiptext">{q.guidelines}</span>
                                     </span></p>
                                     <div className="question-tags">
