@@ -32,9 +32,9 @@ const Header = () => {
   return (
     <header className="site-header">
       <Container className="site-header__inner">
-        <Link to="/" className="site-header__logo" aria-label="ESG Reporting — Home">
+        <Link to="/" className="site-header__logo" aria-label="Sustanica — Home">
           <span className="site-header__logo-mark" aria-hidden="true"><img src="logo.png" alt="Icon"/></span>
-          <span className="site-header__logo-text">ESG Reporting</span>
+          <span className="site-header__logo-text">Sustanica</span>
         </Link>
 
         <nav className="site-header__nav" aria-label="Main navigation">

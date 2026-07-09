@@ -3,7 +3,7 @@ export const AUTH_SESSION_KEY = 'esg-auth-session-v1';
 export const DUMMY_USER = {
   username: 'esguser',
   password: 'password123',
-  displayName: 'ESG Test User',
+  displayName: 'TestingUser1',
 };
 
 export const getAuthSession = () => {
