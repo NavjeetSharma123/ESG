@@ -809,9 +809,17 @@ const ESGReportForm = () => {
 
   const handleSupportingDocumentChange = (key, fileList) => {
     const files = Array.from(fileList || []).map(fileToDocumentMeta);
-    setSupportingDocuments((prev) => ({ ...prev, [key]: files }));
+    setSupportingDocuments((prev) => ({ ...prev, [key]: [...(prev[key] || []), ...files] }));
     setHasUnsavedChanges(true);
     setSaveError('');
+  };
+
+  const removeSupportingDocument = (key, file) => {
+    setSupportingDocuments((prev) => ({
+      ...prev,
+      [key]: (prev[key] || []).filter((item) => !(item.name === file.name && item.lastModified === file.lastModified)),
+    }));
+    setHasUnsavedChanges(true);
   };
 
   const handleSaveProgress = async () => {
@@ -1071,12 +1079,25 @@ const ESGReportForm = () => {
                     accept={FILE_ACCEPT_TYPES}
                     onChange={(event) => handleSupportingDocumentChange(documentType.key, event.target.files)}
                   />
+                  <div
+                    className="document-drop-zone"
+                    role="button"
+                    tabIndex={0}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => { event.preventDefault(); handleSupportingDocumentChange(documentType.key, event.dataTransfer.files); }}
+                    onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') document.getElementById(`doc-${documentType.key}`)?.click(); }}
+                    onClick={() => document.getElementById(`doc-${documentType.key}`)?.click()}
+                  >
+                    <strong>Drag and drop files here</strong>
+                    <span>or choose files from your device</span>
+                  </div>
                   {uploadedFiles.length > 0 ? (
                     <ul className="document-file-list">
                       {uploadedFiles.map((file) => (
                         <li key={`${file.name}-${file.lastModified}`}>
                           <span>{file.name}</span>
                           <small>{formatFileSize(file.size)}</small>
+                          <button type="button" onClick={() => removeSupportingDocument(documentType.key, file)} aria-label={`Remove ${file.name}`}>Remove</button>
                         </li>
                       ))}
                     </ul>

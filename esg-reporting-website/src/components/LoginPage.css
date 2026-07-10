@@ -94,3 +94,25 @@
 .login-demo strong {
   color: var(--color-text-primary);
 }
+
+.login-success {
+  color: #166534;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.login-secondary {
+  margin-top: 0 !important;
+  background: transparent !important;
+  color: var(--color-accent) !important;
+  border: 1px solid var(--color-border) !important;
+}
+
+.login-switch {
+  margin: var(--space-5) 0 0 !important;
+  font-size: var(--text-sm);
+  text-align: center;
+}

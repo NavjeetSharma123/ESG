@@ -1,0 +1,21 @@
+import React, { useState } from 'react';
+import { Link, Redirect, useHistory } from 'react-router-dom';
+import { isAuthenticated, login, register } from '../utils/auth';
+import './LoginPage.css';
+
+const emailJsConfigured = () => Boolean(process.env.REACT_APP_EMAILJS_SERVICE_ID && process.env.REACT_APP_EMAILJS_TEMPLATE_ID && process.env.REACT_APP_EMAILJS_PUBLIC_KEY);
+const sendOtp = async (email, code) => {
+  if (!emailJsConfigured()) throw new Error('Email verification is not configured. Add the EmailJS environment variables and restart the app.');
+  const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service_id: process.env.REACT_APP_EMAILJS_SERVICE_ID, template_id: process.env.REACT_APP_EMAILJS_TEMPLATE_ID, user_id: process.env.REACT_APP_EMAILJS_PUBLIC_KEY, template_params: { to_email: email, otp_code: code } }) });
+  if (!response.ok) throw new Error('We could not send the verification email. Please try again.');
+};
+
+const RegisterPage = () => {
+  const history = useHistory(); const [form, setForm] = useState({ displayName: '', email: '', company: '', password: '', confirmPassword: '' }); const [otp, setOtp] = useState(''); const [issuedOtp, setIssuedOtp] = useState(''); const [message, setMessage] = useState(''); const [error, setError] = useState(''); const [sending, setSending] = useState(false);
+  if (isAuthenticated()) return <Redirect to="/profile" />;
+  const change = (event) => { setForm((current) => ({ ...current, [event.target.name]: event.target.value })); setError(''); };
+  const requestOtp = async (event) => { event.preventDefault(); if (form.password.length < 8) return setError('Use a password with at least 8 characters.'); if (form.password !== form.confirmPassword) return setError('Passwords do not match.'); setSending(true); const code = String(Math.floor(100000 + Math.random() * 900000)); try { await sendOtp(form.email, code); setIssuedOtp(code); setMessage(`A six-digit verification code was sent to ${form.email}.`); } catch (err) { setError(err.message); } finally { setSending(false); } };
+  const verify = (event) => { event.preventDefault(); if (otp !== issuedOtp) return setError('That verification code is incorrect.'); try { const user = register(form); login(user.email, form.password); history.replace('/profile'); } catch (err) { setError(err.message); } };
+  return <main className="login-page"><section className="login-panel"><span className="login-kicker">Create your workspace</span><h1>Register</h1><p>Verify your email before your ESG reporting account is created.</p><form className="login-form" onSubmit={issuedOtp ? verify : requestOtp}>{!issuedOtp ? <><label htmlFor="displayName">Full name</label><input id="displayName" name="displayName" value={form.displayName} onChange={change} required /><label htmlFor="email">Work email</label><input id="email" name="email" type="email" value={form.email} onChange={change} required /><label htmlFor="company">Organisation</label><input id="company" name="company" value={form.company} onChange={change} required /><label htmlFor="password">Password</label><input id="password" name="password" type="password" value={form.password} onChange={change} minLength="8" required /><label htmlFor="confirmPassword">Confirm password</label><input id="confirmPassword" name="confirmPassword" type="password" value={form.confirmPassword} onChange={change} required /></> : <><label htmlFor="otp">Email verification code</label><input id="otp" inputMode="numeric" value={otp} onChange={(event) => setOtp(event.target.value)} placeholder="6-digit code" required /><button type="button" className="login-secondary" onClick={() => setIssuedOtp('')}>Use a different email</button></>} {message ? <div className="login-success" role="status">{message}</div> : null}{error ? <div className="login-error" role="alert">{error}</div> : null}<button type="submit" disabled={sending}>{sending ? 'Sending code...' : issuedOtp ? 'Verify and create account' : 'Send verification code'}</button></form><p className="login-switch">Already registered? <Link to="/login">Sign in</Link></p></section></main>;
+};
+export default RegisterPage;

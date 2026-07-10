@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Redirect, useHistory, useLocation } from 'react-router-dom';
+import { Link, Redirect, useHistory, useLocation } from 'react-router-dom';
 import { DUMMY_USER, isAuthenticated, login } from '../utils/auth';
 import './LoginPage.css';
 
@@ -65,6 +65,7 @@ const LoginPage = () => {
           <span>Username: {DUMMY_USER.username}</span>
           <span>Password: {DUMMY_USER.password}</span>
         </div>
+        <p className="login-switch">New to Sustanica? <Link to="/register">Create an account</Link></p>
       </section>
     </main>
   );
