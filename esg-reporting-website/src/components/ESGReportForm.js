@@ -115,9 +115,9 @@ const getDefaultQuestionAnswer = (question) => {
   if (type === 'date') return new Date().toISOString().slice(0, 10);
   if (type === 'multiple choice') {
     const options = Array.isArray(question.options) ? question.options.filter(Boolean) : [];
-    return options[0] || 'Not disclosed';
+    return options[0] || '[sample answer]';
   }
-  return 'Not disclosed';
+  return '[sample answer]';
 };
 
 const hasAnsweredQuestion = (value) => {

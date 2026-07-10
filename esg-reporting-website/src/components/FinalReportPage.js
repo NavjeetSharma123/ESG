@@ -67,6 +67,7 @@ const FinalReportPage = () => {
   const disclosureGroups = buildDisclosureHierarchy(questions, selectedFrameworks);
   const industry = flatData.industry || flatData.sector || 'Industry not specified';
   const reportingPeriod = flatData.reportingPeriod || flatData.financialYear || 'Current reporting period';
+  const dataCollectionWindow = state.dataCollectionWindow || flatData.dataCollectionWindow || flatData.reportingDataCollectionWindow;
   const updatedBy = state.lastUpdatedBy || 'ESG Reporting Team';
   const evidenceCount = Number(state.supportingDocumentsCount || flatData.supportingDocumentsCount || 0);
   const commentsCount = Number(state.reviewCommentsCount || 0);
@@ -99,6 +100,9 @@ const FinalReportPage = () => {
   const missingFields = Object.entries(FRAMEWORK_FIELDS[selectedFrameworks[0]] || []).filter(([, key]) => !isAnswered(flatData[key])).map(([, key]) => key);
   const gapItems = missingFields.slice(0, 4).map((key, index) => ({ label: key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()), priority: index === 0 ? 'Critical' : index < 3 ? 'Medium' : 'Low' }));
   if (!gapItems.length) gapItems.push({ label: 'No critical disclosure gaps detected', priority: 'Low' });
+  const unansweredLabels = questions.filter((question) => !isAnswered(answerFor(question))).slice(0, 3).map((question) => question.question || question.id);
+  const answeredLabels = questions.filter((question) => isAnswered(answerFor(question))).slice(0, 3).map((question) => question.question || question.id);
+  const numericValue = (value) => Number(String(value ?? '').replace(/[^0-9.-]/g, '')) || 0;
   const metrics = [
     ['Scope 1 emissions', flatData.scope1Emissions, 'tCO₂e'], ['Scope 2 emissions', flatData.scope2Emissions, 'tCO₂e'],
     ['Energy consumption', flatData.energyConsumption, 'MWh'], ['Water usage', flatData.waterUsage, 'm³'],
@@ -117,6 +121,7 @@ const FinalReportPage = () => {
           companyName,
           industry,
           reportingPeriod,
+          dataCollectionWindow,
           readiness,
           groups: disclosureGroups,
           answerFor,
@@ -135,6 +140,24 @@ const FinalReportPage = () => {
             socialScore,
             governanceScore,
             maturity,
+            scope1: numericValue(flatData.scope1Emissions),
+            scope2: numericValue(flatData.scope2Emissions),
+            scope3: numericValue(flatData.scope3Emissions),
+            topRisks: unansweredLabels,
+            strengths: answeredLabels,
+            actions: gapItems.slice(0, 3).map((item) => item.label),
+            materialityApproach: state.materialityApproach || flatData.materialityApproach,
+          },
+          executive: {
+            signatoryName: state.ceoName || state.csoName || flatData.ceoName || flatData.csoName,
+            signatoryTitle: state.ceoName || flatData.ceoName ? 'Chief Executive Officer' : state.csoName || flatData.csoName ? 'Chief Sustainability Officer' : undefined,
+          },
+          assurance: {
+            provider: state.assuranceProvider || flatData.assuranceProvider,
+            scope: state.assuranceScope || flatData.assuranceScope,
+            standard: state.assuranceStandard || flatData.assuranceStandard,
+            level: state.assuranceLevel || flatData.assuranceLevel,
+            limitations: state.assuranceLimitations || flatData.assuranceLimitations,
           },
         });
         doc.save(`${safeName}-ESG-Report.pdf`);
