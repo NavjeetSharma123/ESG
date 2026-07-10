@@ -12,7 +12,21 @@ import SectionHeader from './ui/SectionHeader';
 import Modal from './ui/Modal';
 import DemoForm from './DemoForm';
 import './HomePage.css';
+import { supabase } from '../data/SupabaseConfig'
 
+async function fetchUsers() {
+  const { data, error } = await supabase
+    .from('register') // Replace with your actual table name
+    .select('*')
+
+  if (error) {
+    console.error('Error fetching data:', error)
+  } else {
+    console.log('Database connected successfully! Data:', data)
+  }
+}
+
+fetchUsers()
 const frameworkScores = {
   GRI: '96%',
   SASB: '91%',

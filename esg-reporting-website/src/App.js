@@ -9,12 +9,9 @@ import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import ProfilePage from './components/ProfilePage';
 import ESGReportForm from './components/ESGReportForm';
-import GRIDetailsForm from './components/GRIDetailsForm';
 import BRSRPage from './components/BRSRPage';
 import FinalReportPage from './components/FinalReportPage';
-import ESGReportResult from './components/ESGReportResult';
 import CompaniesPage from './components/CompaniesPage';
-import MSCIReadiness from './components/MSCIReadiness';
 import { isAuthenticated } from './utils/auth';
 import './assets/styles.css';
 

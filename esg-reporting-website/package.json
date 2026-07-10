@@ -19,6 +19,7 @@
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
+    "@supabase/supabase-js": "^2.39.7",
     "jspdf": "^2.5.1",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^5.7.284",
