@@ -783,6 +783,14 @@ const ESGReportForm = () => {
     Object.values(supportingDocuments).reduce((count, files) => count + (Array.isArray(files) ? files.length : 0), 0)
   ), [supportingDocuments]);
 
+  const filteredAnsweredCount = useMemo(() => (
+    filteredQuestions.filter((question) => isAnswered(getAnswer(questionAnswers, question.id))).length
+  ), [filteredQuestions, questionAnswers]);
+
+  const filteredCompletionPct = filteredQuestions.length
+    ? Math.round((filteredAnsweredCount / filteredQuestions.length) * 100)
+    : 0;
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => {
@@ -1135,6 +1143,18 @@ const ESGReportForm = () => {
             )}
           </p>
 
+          {/* <div className="questionnaire-overview" aria-label="Questionnaire completion overview">
+            <div className="questionnaire-overview-copy">
+              <span className="questionnaire-kicker">Questionnaire progress</span>
+              <strong>{filteredAnsweredCount} of {filteredQuestions.length} answered</strong>
+              <small>Completed questions are highlighted in green.</small>
+            </div>
+            <div className="questionnaire-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={filteredCompletionPct} aria-label={`${filteredCompletionPct}% of visible questions answered`}>
+              <div className="questionnaire-progress-ring"><span>{filteredCompletionPct}%</span></div>
+              <div className="questionnaire-progress-track"><span style={{ width: `${filteredCompletionPct}%` }} /></div>
+            </div>
+          </div> */}
+
           <div className="questions-filters">
             <div className="form-group">
               <label htmlFor="questionSearch">Search questions</label>
@@ -1196,14 +1216,19 @@ const ESGReportForm = () => {
                             <tr className="questions-dept-header">
                             { /* <td>{dep}</td> */ }
                             </tr>
-                            {deptQuestions.map((q) => (
-                              <tr key={q.id} className={(q.required || q.isMandatory || q.mandatory) && showValidation && !isAnswered(getAnswer(questionAnswers, q.id)) ? 'question-missing' : ''}>
+                            {deptQuestions.map((q) => {
+                              const answered = isAnswered(getAnswer(questionAnswers, q.id));
+                              const missingRequired = (q.required || q.isMandatory || q.mandatory) && showValidation && !answered;
+                              return (
+                              <tr key={q.id} className={`question-row ${answered ? 'question-complete' : ''} ${missingRequired ? 'question-missing' : ''}`}>
                                 <td>
                                   <div className="question-item">
+                                    <span className={`question-status ${answered ? 'is-complete' : ''}`} aria-label={answered ? 'Answered' : `Question`}>{answered ? '✓' : ''}</span>
                                     <p className="question-text">{q.question} <span className="tooltip">🛈
                                       <span className="tooltiptext">{q.guidelines}</span>
                                     </span></p>
                                     <div className="question-tags">
+                                      {answered && <span className="question-complete-label">Completed</span>}
                                       {(q.required || q.isMandatory || q.mandatory) && <span className="question-chip required">Required</span>}
 {/*                                      {String(q.framework || '').split(/[\s,;/]+/).filter(Boolean).map((fw) => <span className="question-chip" key={fw}>{fw}</span>)}
                                       {getLinkedQuestionIds(q).map((id) => <span className="question-chip linked" key={id}>Linked: #{id}</span>)} */}
@@ -1212,7 +1237,8 @@ const ESGReportForm = () => {
                                   </div>
                                 </td>
                               </tr>
-                            ))}
+                              );
+                            })}
                           </React.Fragment>
                         );
                       })
