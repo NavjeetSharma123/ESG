@@ -57,7 +57,7 @@ const Header = () => {
           </Button>
           {loggedIn ? (
             <>
-              <Link to="/profile" className="site-header__user">{session.first_name}</Link>
+              <Link to="/profile" className="site-header__user">{session.email}</Link>
               <Button type="button" variant="ghost" size="sm" onClick={handleLogout}>
                 Logout
               </Button>
