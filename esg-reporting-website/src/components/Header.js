@@ -12,7 +12,6 @@ const Header = () => {
   const history = useHistory();
   const session = getAuthSession();
   const loggedIn = isAuthenticated();
-
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname]);
@@ -58,7 +57,7 @@ const Header = () => {
           </Button>
           {loggedIn ? (
             <>
-              <Link to="/profile" className="site-header__user">{session.displayName}</Link>
+              <Link to="/profile" className="site-header__user">{session.first_name}</Link>
               <Button type="button" variant="ghost" size="sm" onClick={handleLogout}>
                 Logout
               </Button>

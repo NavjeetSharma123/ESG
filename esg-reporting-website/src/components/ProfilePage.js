@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { getAuthSession, updateProfile } from '../utils/auth';
+import { fetchUserProfile, toProfile } from '../data/supabaseBackend';
 import './ProfilePage.css';
 
 const FIELDS = {
@@ -16,9 +17,30 @@ const ProfilePage = () => {
   const session = getAuthSession();
   const [profile, setProfile] = useState(() => ({ displayName: session?.displayName || '', email: session?.email || '', company: session?.company || '', role: session?.role || 'ESG Reporting Member', esgFrameworks: [], team: [], contacts: {}, certifications: [], policies: [], documents: [], ...session?.profile }));
   const [active, setActive] = useState('Organization'); const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true); const [loadError, setLoadError] = useState(''); const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const user = await fetchUserProfile(session);
+        if (mounted && user) setProfile((current) => ({ ...current, ...toProfile(user) }));
+      } catch (error) {
+        if (mounted) setLoadError('Unable to load the latest profile from Supabase.');
+      } finally { if (mounted) setLoading(false); }
+    };
+    load();
+    return () => { mounted = false; };
+  }, [session?.id, session?.email]);
   const update = (key, value) => { setProfile((current) => ({ ...current, [key]: value })); setSaved(false); };
   const completion = useMemo(() => Math.round(FIELDS.organization.filter(([key]) => String(profile[key] || '').trim()).length / FIELDS.organization.length * 100), [profile]);
-  const save = (event) => { event.preventDefault(); updateProfile({ displayName: profile.displayName, company: profile.legalName || profile.company, role: profile.role, profile }); setSaved(true); };
+  const save = async (event) => {
+    event.preventDefault(); setSaving(true); setLoadError('');
+    try {
+      await updateProfile({ displayName: profile.displayName, company: profile.legalName || profile.company, role: profile.role, profile });
+      setSaved(true);
+    } catch (error) { setLoadError(error.message || 'Unable to save your profile to Supabase.'); }
+    finally { setSaving(false); }
+  };
   const toggleFramework = (item) => update('esgFrameworks', profile.esgFrameworks.includes(item) ? profile.esgFrameworks.filter((value) => value !== item) : [...profile.esgFrameworks, item]);
   const addRecord = (key, record) => update(key, [...profile[key], record]);
   const updateRecord = (key, index, field, value) => update(key, profile[key].map((record, itemIndex) => itemIndex === index ? { ...record, [field]: value } : record));

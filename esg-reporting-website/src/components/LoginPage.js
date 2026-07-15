@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, Redirect, useHistory, useLocation } from 'react-router-dom';
-import { DUMMY_USER, isAuthenticated, login } from '../utils/auth';
+import { isAuthenticated, login } from '../utils/auth';
 import './LoginPage.css';
 
 const LoginPage = () => {
@@ -8,6 +8,7 @@ const LoginPage = () => {
   const location = useLocation();
   const [credentials, setCredentials] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const redirectTo = (location.state && location.state.from) || '/esg-report';
 
   if (isAuthenticated()) {
@@ -20,14 +21,16 @@ const LoginPage = () => {
     setError('');
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    const session = login(credentials.username.trim(), credentials.password);
-    if (!session) {
-      setError('Invalid username or password.');
-      return;
-    }
-    history.replace(redirectTo);
+    setSubmitting(true);
+    try {
+      const session = await login(credentials.username.trim(), credentials.password);
+      if (!session) { setError('Invalid email or password.'); return; }
+      history.replace(redirectTo);
+    } catch (err) {
+      setError(err.message || 'Unable to sign in. Please try again.');
+    } finally { setSubmitting(false); }
   };
 
   return (
@@ -58,13 +61,8 @@ const LoginPage = () => {
             required
           />
           {error ? <div className="login-error" role="alert">{error}</div> : null}
-          <button type="submit">Login</button>
+          <button type="submit" disabled={submitting}>{submitting ? 'Signing in...' : 'Login'}</button>
         </form>
-        <div className="login-demo">
-          <strong>Test login</strong>
-          <span>Username: {DUMMY_USER.username}</span>
-          <span>Password: {DUMMY_USER.password}</span>
-        </div>
         <p className="login-switch">New to Sustanica? <Link to="/register">Create an account</Link></p>
       </section>
     </main>

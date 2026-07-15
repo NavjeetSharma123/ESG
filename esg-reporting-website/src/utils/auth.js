@@ -1,31 +1,38 @@
-export const AUTH_SESSION_KEY = 'esg-auth-session-v1';
-const USERS_KEY = 'esg-registered-users-v1';
+import { supabase } from '../data/SupabaseConfig';
+import { saveUserProfile, toSession } from '../data/supabaseBackend';
 
-export const DUMMY_USER = { username: 'esguser', password: 'password123', displayName: 'TestingUser1', email: 'demo@example.com' };
-const readUsers = () => {
-  try { return JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); } catch (error) { return []; }
-};
-const writeUsers = (users) => localStorage.setItem(USERS_KEY, JSON.stringify(users));
+let currentSession = null;
 
-export const getAuthSession = () => { try { return JSON.parse(localStorage.getItem(AUTH_SESSION_KEY) || 'null'); } catch (error) { return null; } };
+export const getAuthSession = () => currentSession;
 export const isAuthenticated = () => Boolean(getAuthSession());
-export const login = (usernameOrEmail, password) => {
-  const normalized = String(usernameOrEmail || '').trim().toLowerCase();
-  const user = [DUMMY_USER, ...readUsers()].find((item) => (item.username.toLowerCase() === normalized || item.email.toLowerCase() === normalized) && item.password === password);
-  if (!user) return null;
-  const session = { username: user.username, email: user.email, displayName: user.displayName, company: user.company || '', role: user.role || 'ESG Reporting Member', loggedInAt: new Date().toISOString() };
-  localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
-  return session;
+
+export const login = async (usernameOrEmail, password) => {
+  const email = String(usernameOrEmail || '').trim().toLowerCase();
+  const { data: user, error } = await supabase
+    .from('register')
+    .select('*')
+    .eq('email', email)
+    .eq('password_hash', password)
+    .maybeSingle();
+  if (error) throw error;
+  if (!user || user.is_active === false) return null;
+  currentSession = toSession(user);
+  return currentSession;
 };
-export const register = (user) => {
-  const users = readUsers(); const email = String(user.email || '').trim().toLowerCase();
-  if (users.some((item) => item.email.toLowerCase() === email) || DUMMY_USER.email === email) throw new Error('An account already exists for this email.');
-  const newUser = { ...user, email, username: email, createdAt: new Date().toISOString() };
-  writeUsers([...users, newUser]); return newUser;
+
+export const register = async (user) => {
+  const email = String(user.email || '').trim().toLowerCase();
+  const { confirmPassword, ...userForInsert } = user;
+  const { data, error } = await supabase.from('register').insert({ ...userForInsert, email }).select().single();
+  if (error) throw error;
+  return data;
 };
-export const updateProfile = (updates) => {
+
+export const updateProfile = async (updates) => {
   const session = getAuthSession(); if (!session) return null;
-  const users = readUsers().map((user) => user.email === session.email ? { ...user, ...updates } : user);
-  writeUsers(users); const next = { ...session, ...updates }; localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(next)); return next;
+  const user = await saveUserProfile(session, updates.profile || updates);
+  const next = { ...session, ...toSession(user), ...updates };
+  currentSession = next; return next;
 };
-export const logout = () => localStorage.removeItem(AUTH_SESSION_KEY);
+
+export const logout = () => { currentSession = null; };

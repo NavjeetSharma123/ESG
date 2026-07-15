@@ -3,23 +3,6 @@ import { Link, Redirect, useHistory } from 'react-router-dom';
 import { isAuthenticated, login, register } from '../utils/auth';
 import './LoginPage.css';
 
-const emailJsConfigured = () => Boolean(process.env.REACT_APP_EMAILJS_SERVICE_ID && process.env.REACT_APP_EMAILJS_TEMPLATE_ID && process.env.REACT_APP_EMAILJS_PUBLIC_KEY);
-
-const sendOtp = async (email, code) => {
-  if (!emailJsConfigured()) throw new Error('Email verification is not configured. Add the EmailJS environment variables and restart the app.');
-  const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      service_id: process.env.REACT_APP_EMAILJS_SERVICE_ID,
-      template_id: process.env.REACT_APP_EMAILJS_TEMPLATE_ID,
-      user_id: process.env.REACT_APP_EMAILJS_PUBLIC_KEY,
-      template_params: { to_email: email, otp_code: code },
-    }),
-  });
-  if (!response.ok) throw new Error('We could not send the verification email. Please try again.');
-};
-
 const initialForm = {
   organization_name: '', industry: '', sector: '', company_type: '', website: '',
   registration_number: '', gst_number: '', cin_number: '', country: '', state: '', city: '',
@@ -37,8 +20,8 @@ const Field = ({ label, name, value, onChange, type = 'text', required = false, 
 const RegisterPage = () => {
   const history = useHistory();
   const [form, setForm] = useState(initialForm);
-  const [otp, setOtp] = useState('');
-  const [issuedOtp, setIssuedOtp] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
@@ -50,34 +33,26 @@ const RegisterPage = () => {
     setError('');
   };
 
-  const requestOtp = async (event) => {
+  const handleTermsChange = (event) => {
+    setAcceptedTerms(event.target.checked);
+    setError('');
+    if (event.target.checked) setShowTerms(true);
+  };
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
     if (form.password.length < 8) return setError('Use a password with at least 8 characters.');
     if (form.password !== form.confirmPassword) return setError('Passwords do not match.');
+    if (!acceptedTerms) return setError('Please accept the Terms and Conditions to register.');
     setSending(true);
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    try {
-      await sendOtp(form.email, code);
-      setIssuedOtp(code);
-      setMessage(`A six-digit verification code was sent to ${form.email}.`);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const verify = (event) => {
-    event.preventDefault();
-    if (otp !== issuedOtp) return setError('That verification code is incorrect.');
     try {
       const timestamp = new Date().toISOString();
-      const user = register({
+      const user = await register({
         ...form,
-        company: form.organization_name,
-        displayName: `${form.first_name} ${form.last_name}`.trim(),
+        organization_name: form.organization_name,
+        first_name: form.first_name,
         password_hash: form.password,
-        email_verified: true,
+        email_verified: false,
         organization_verified: false,
         verification_token: null,
         verification_token_expiry: null,
@@ -86,14 +61,16 @@ const RegisterPage = () => {
         created_at: timestamp,
         updated_at: timestamp,
       });
-      login(user.email, form.password);
+      await login(user.email, form.password);
       history.replace('/profile');
     } catch (err) {
       setError(err.message);
+    } finally {
+      setSending(false);
     }
   };
 
-  return <main className="login-page"><section className="login-panel register-panel"><span className="login-kicker">Create your workspace</span><h1>Register</h1><p>Provide your organisation and account details, then verify your work email.</p><form className="login-form" onSubmit={issuedOtp ? verify : requestOtp}>{!issuedOtp ? <>
+  return <main className="login-page"><section className="login-panel register-panel"><span className="login-kicker">Create your workspace</span><h1>Register</h1><p>Provide your organisation and account details to create your workspace.</p><form className="login-form" onSubmit={handleSubmit}>
     <fieldset className="register-section"><legend>Organisation details</legend><div className="register-grid">
       <Field label="Organisation name" name="organization_name" value={form.organization_name} onChange={change} required />
       <Field label="Industry" name="industry" value={form.industry} onChange={change} required />
@@ -119,9 +96,28 @@ const RegisterPage = () => {
       <Field label="Password" name="password" type="password" value={form.password} onChange={change} minLength="8" required />
       <Field label="Confirm password" name="confirmPassword" type="password" value={form.confirmPassword} onChange={change} required />
     </div></fieldset>
-  </> : <><label htmlFor="otp">Email verification code</label><input id="otp" inputMode="numeric" value={otp} onChange={(event) => setOtp(event.target.value)} placeholder="6-digit code" required /><button type="button" className="login-secondary" onClick={() => setIssuedOtp('')}>Use a different email</button></>}
-    {message ? <div className="login-success" role="status">{message}</div> : null}{error ? <div className="login-error" role="alert">{error}</div> : null}<button type="submit" disabled={sending}>{sending ? 'Sending code...' : issuedOtp ? 'Verify and create account' : 'Send verification code'}</button>
-  </form><p className="login-switch">Already registered? <Link to="/login">Sign in</Link></p></section></main>;
+    <label className="terms-checkbox" htmlFor="tnc">
+      <input type="checkbox" id="tnc" name="tnc" checked={acceptedTerms} onChange={handleTermsChange} required />
+      <span>I agree to the <button type="button" className="terms-link" onClick={() => setShowTerms(true)}>Terms and Conditions</button>.</span>
+    </label>
+    {message ? <div className="login-success" role="status">{message}</div> : null}{error ? <div className="login-error" role="alert">{error}</div> : null}<button type="submit" disabled={sending}>{sending ? 'Registering...' : 'Register'}</button>
+  </form>
+  <p className="login-switch">Already registered? <Link to="/login">Sign in</Link></p></section>
+
+  {showTerms ? <div className="terms-modal" role="dialog" aria-modal="true" aria-labelledby="terms-title">
+    <div className="terms-modal__content">
+      <button type="button" className="terms-modal__close" aria-label="Close Terms and Conditions" onClick={() => setShowTerms(false)}>×</button>
+      <h2 id="terms-title">Terms and Conditions</h2>
+      <div className="terms-modal__body">
+        <p><strong>Template placeholder:</strong> Add your Terms and Conditions text here.</p>
+        <p>Use this section for eligibility, account responsibilities, acceptable use, subscriptions or fees, data usage, privacy references, limitations of liability, termination, governing law, and contact details.</p>
+      </div>
+      <button type="button" className="terms-modal__accept" onClick={() => { setAcceptedTerms(true); setShowTerms(false); }}>I Agree</button>
+    </div>
+  </div> : null}
+  
+  </main>;
+  
 };
 
 export default RegisterPage;

@@ -1,4 +1,6 @@
 export const ESG_DRAFT_KEY = 'esg-report-draft-v1';
+import { getAuthSession } from './auth';
+import { saveQuestionnaire } from '../data/supabaseBackend';
 
 export const normalizeQuestionId = (id) => String(id ?? '').trim();
 
@@ -74,5 +76,7 @@ export const saveESGAnswers = async (draft) => {
     });
     if (!response.ok) throw new Error(`Unable to save ESG answers (${response.status})`);
   }
-  localStorage.setItem(ESG_DRAFT_KEY, JSON.stringify({ ...draft, savedAt: new Date().toISOString() }));
+  const savedDraft = { ...draft, savedAt: new Date().toISOString() };
+  await saveQuestionnaire(getAuthSession(), savedDraft);
+  localStorage.setItem(ESG_DRAFT_KEY, JSON.stringify(savedDraft));
 };
