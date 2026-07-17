@@ -1,10 +1,6 @@
 import { supabase } from './SupabaseConfig';
 
-// These defaults match the app's conventions. Set the REACT_APP values when your
-// questionnaire table uses different names, then restart the development server.
-const QUESTIONNAIRE_TABLE = process.env.REACT_APP_SUPABASE_QUESTIONNAIRE_TABLE || 'questionnaires';
-const QUESTIONNAIRE_USER_COLUMN = process.env.REACT_APP_SUPABASE_QUESTIONNAIRE_USER_COLUMN || 'user_id';
-const QUESTIONNAIRE_PAYLOAD_COLUMN = process.env.REACT_APP_SUPABASE_QUESTIONNAIRE_PAYLOAD_COLUMN || 'payload';
+const QUESTIONNAIRE_TABLE = 'questionnaires';
 
 export const toSession = (user) => ({
   id: user.id,
@@ -78,11 +74,53 @@ export const saveUserProfile = async (session, profile) => {
 
 export const saveQuestionnaire = async (session, draft) => {
   if (!session?.id) throw new Error('Please sign in again before saving your questionnaire.');
-  const payload = { ...draft, savedAt: new Date().toISOString() };
-  const row = { [QUESTIONNAIRE_USER_COLUMN]: session.id, [QUESTIONNAIRE_PAYLOAD_COLUMN]: payload };
-  const { error } = await supabase
+
+  const { data: organization, error: organizationError } = await supabase
+    .from('register')
+    .select('id, organization_name')
+    .eq('id', session.id)
+    .maybeSingle();
+
+  if (organizationError) {
+    throw new Error(`Unable to verify organization: ${organizationError.message}`);
+  }
+  if (!organization) {
+    throw new Error('Unable to save questionnaire because this organization is not registered.');
+  }
+
+  const savedAt = new Date().toISOString();
+  const questionJson = draft.question_json || draft.questionJson || draft.answersByQuestionId || {};
+  const payload = { ...draft, savedAt };
+  const row = {
+    organization_id: organization.id,
+    organization_name: organization.organization_name || session.company || draft.esgData?.companyName || '',
+    metadata: {
+      source: draft.source || 'ESG',
+      savedAt,
+      company: draft.esgData?.companyName || '',
+      industry: draft.esgData?.industry || '',
+      reportingPeriod: draft.esgData?.reportingPeriod || '',
+      supportingDocumentsCount: draft.supportingDocumentsCount || 0,
+    },
+    question_json: questionJson,
+    updated_at: savedAt,
+  };
+
+  const { data: existing, error: lookupError } = await supabase
     .from(QUESTIONNAIRE_TABLE)
-    .upsert(row, { onConflict: QUESTIONNAIRE_USER_COLUMN });
+    .select('organization_id')
+    .eq('organization_id', organization.id)
+    .limit(1)
+    .maybeSingle();
+
+  if (lookupError) {
+    throw new Error(`Unable to check questionnaire: ${lookupError.message}`);
+  }
+
+  const { error } = existing
+    ? await supabase.from(QUESTIONNAIRE_TABLE).update(row).eq('organization_id', organization.id)
+    : await supabase.from(QUESTIONNAIRE_TABLE).insert(row);
+
   if (error) {
     throw new Error(`Unable to save questionnaire to Supabase: ${error.message}`);
   }

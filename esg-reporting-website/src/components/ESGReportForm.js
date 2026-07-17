@@ -138,6 +138,20 @@ const buildQuestionWithAnswer = (question, answers) => {
   };
 };
 
+const buildQuestionJson = (allQuestions, visibleQuestions, answers) => {
+  const normalizedAnswers = answers || {};
+  const visibleIds = new Set(visibleQuestions.map((question) => normalizeQuestionId(question.id)));
+
+  return allQuestions.reduce((result, question) => {
+    const id = normalizeQuestionId(question.id);
+    if (!id) return result;
+
+    const answer = getAnswer(normalizedAnswers, id);
+    result[id] = visibleIds.has(id) && isAnswered(answer) ? answer : '';
+    return result;
+  }, {});
+};
+
 const ESGReportForm = () => {
   const history = useHistory();
   const location = useLocation();
@@ -834,7 +848,9 @@ const ESGReportForm = () => {
     if (saving) return true;
     setSaving(true); setSaveError('');
     try {
+      const questionJson = buildQuestionJson(questions, applicableQuestions, questionAnswers);
       await saveESGAnswers({ source: 'ESG', esgData: formData, questionAnswers,
+        questionJson,
         supportingDocuments, supportingDocumentsCount,
         visibleQuestions: applicableQuestions.map((q) => buildQuestionWithAnswer(q, questionAnswers)) });
       setLastSaved(new Date()); setHasUnsavedChanges(false); return true;
@@ -861,6 +877,7 @@ const ESGReportForm = () => {
     const answeredQuestions = applicableQuestions.map((question) =>
       buildQuestionWithAnswer(question, questionAnswers)
     );
+    const questionJson = buildQuestionJson(questions, applicableQuestions, questionAnswers);
 
     await handleSaveProgress();
 
@@ -870,6 +887,7 @@ const ESGReportForm = () => {
         source: 'ESG',
         esgData: formData,
         reportAnswers: questionAnswers,
+        questionJson,
         supportingDocuments,
         supportingDocumentsCount,
         visibleQuestions: answeredQuestions,
