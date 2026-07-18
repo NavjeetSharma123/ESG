@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import './ESGReportForm.css';
+import { supabase } from '../data/SupabaseConfig';
 import {
   getAnswer, getLinkedQuestionIds, isAnswered, loadESGDraft,
   normalizeQuestionId, propagateLinkedAnswer, questionMatchesSector, saveESGAnswers,
@@ -42,7 +43,8 @@ const SUPPORTING_DOCUMENTS = [
   { key: 'isoCertificates', label: 'ISO Certificates (if applicable)' },
 ];
 
-const FILE_ACCEPT_TYPES = '.pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.webp';
+const FILE_ACCEPT_TYPES = '.pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg';
+const DOCUMENTS_BUCKET = 'Documents';
 
 const fileToDocumentMeta = (file) => ({
   name: file.name,
@@ -50,6 +52,27 @@ const fileToDocumentMeta = (file) => ({
   type: file.type,
   lastModified: file.lastModified,
 });
+
+const sanitizeDocumentPart = (value, fallback) => {
+  const sanitized = String(value || fallback)
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, '-')
+    .replace(/\s+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return sanitized || fallback;
+};
+
+const getFileExtension = (fileName) => {
+  const extension = String(fileName || '').split('.').pop();
+  return extension && extension !== fileName ? extension.toLowerCase() : 'pdf';
+};
+
+const buildStorageDocumentName = (documentType, organizationName, fileName) => {
+  const type = sanitizeDocumentPart(documentType, 'Document');
+  const date = new Date().toISOString().slice(0, 10);
+  const organization = sanitizeDocumentPart(organizationName, 'Organization');
+  return `${type}_${date}_${organization}.${getFileExtension(fileName)}`;
+};
 
 const formatFileSize = (bytes) => {
   if (!bytes) return '0 KB';
@@ -171,6 +194,7 @@ const ESGReportForm = () => {
   const [showValidation, setShowValidation] = useState(false);
   const [selectedDepartments, setSelectedDepartments] = useState([]);
   const [supportingDocuments, setSupportingDocuments] = useState({});
+  const [documentStorageStatus, setDocumentStorageStatus] = useState('');
 
   const handleQuestionAnswer = (id, value) => {
     const normalizedId = normalizeQuestionId(id);
@@ -829,19 +853,65 @@ const ESGReportForm = () => {
     setHasUnsavedChanges(true);
   };
 
-  const handleSupportingDocumentChange = (key, fileList) => {
-    const files = Array.from(fileList || []).map(fileToDocumentMeta);
-    setSupportingDocuments((prev) => ({ ...prev, [key]: [...(prev[key] || []), ...files] }));
-    setHasUnsavedChanges(true);
-    setSaveError('');
+  const uploadSupportingDocument = async (documentType, file) => {
+    const storageName = buildStorageDocumentName(documentType.label, formData.companyName, file.name);
+    const { data, error } = await supabase.storage
+      .from(DOCUMENTS_BUCKET)
+      .upload(storageName, file, {
+        cacheControl: '3600',
+        contentType: file.type || 'application/octet-stream',
+        upsert: true,
+      });
+
+    if (error) throw error;
+
+    return {
+      ...fileToDocumentMeta(file),
+      name: storageName,
+      originalName: file.name,
+      documentType: documentType.label,
+      bucket: DOCUMENTS_BUCKET,
+      path: data?.path || storageName,
+      uploadedAt: new Date().toISOString(),
+    };
   };
 
-  const removeSupportingDocument = (key, file) => {
-    setSupportingDocuments((prev) => ({
-      ...prev,
-      [key]: (prev[key] || []).filter((item) => !(item.name === file.name && item.lastModified === file.lastModified)),
-    }));
-    setHasUnsavedChanges(true);
+  const handleSupportingDocumentChange = async (key, fileList) => {
+    const documentType = SUPPORTING_DOCUMENTS.find((item) => item.key === key);
+    const files = Array.from(fileList || []);
+    if (!documentType || files.length === 0) return;
+
+    setDocumentStorageStatus(`Uploading ${files.length} document${files.length === 1 ? '' : 's'} to Supabase...`);
+    setSaveError('');
+    try {
+      const uploadedFiles = await Promise.all(files.map((file) => uploadSupportingDocument(documentType, file)));
+      setSupportingDocuments((prev) => ({ ...prev, [key]: [...(prev[key] || []), ...uploadedFiles] }));
+      setDocumentStorageStatus(`Saved ${files.length} document${files.length === 1 ? '' : 's'} to Supabase.`);
+      setHasUnsavedChanges(true);
+    } catch (error) {
+      console.error(error);
+      setDocumentStorageStatus('');
+      setSaveError('Document upload failed. Please check Supabase storage access.');
+    }
+  };
+
+  const removeSupportingDocument = async (key, file) => {
+    setDocumentStorageStatus(`Removing ${file.name} from Supabase...`);
+    try {
+      if (file.path) {
+        const { error } = await supabase.storage.from(DOCUMENTS_BUCKET).remove([file.path]);
+        if (error) throw error;
+      }
+      setSupportingDocuments((prev) => ({
+        ...prev,
+        [key]: (prev[key] || []).filter((item) => !(item.name === file.name && item.lastModified === file.lastModified)),
+      }));
+      setDocumentStorageStatus('Document removed from Supabase.');
+      setHasUnsavedChanges(true);
+    } catch (error) {
+      console.error(error);
+      setSaveError('Document removal failed. Please check Supabase storage access.');
+    }
   };
 
   const handleSaveProgress = async () => {
@@ -1089,6 +1159,7 @@ const ESGReportForm = () => {
             <div>
               <h2>Supporting Documents</h2>
               <p>Upload evidence files for audit readiness. Multiple files are allowed for each document type.</p>
+              {documentStorageStatus && <p className="field-helper">{documentStorageStatus}</p>}
             </div>
             <span>{supportingDocumentsCount} uploaded</span>
           </div>
