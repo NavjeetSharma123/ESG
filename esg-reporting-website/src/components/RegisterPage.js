@@ -43,6 +43,7 @@ const RegisterPage = () => {
     event.preventDefault();
     if (form.password.length < 8) return setError('Use a password with at least 8 characters.');
     if (form.password !== form.confirmPassword) return setError('Passwords do not match.');
+    if (!form.cin_number.trim()) return setError('CIN number is required to create your Documents folder.');
     if (!acceptedTerms) return setError('Please accept the Terms and Conditions to register.');
     setSending(true);
     try {
@@ -79,7 +80,7 @@ const RegisterPage = () => {
       <Field label="Website" name="website" type="url" value={form.website} onChange={change} placeholder="https://example.com" />
       <Field label="Registration number" name="registration_number" value={form.registration_number} onChange={change} />
       <Field label="GST number" name="gst_number" value={form.gst_number} onChange={change} />
-      <Field label="CIN number" name="cin_number" value={form.cin_number} onChange={change} />
+      <Field label="CIN number" name="cin_number" value={form.cin_number} onChange={change} required />
       <Field label="Employee count" name="employee_count" type="number" min="0" value={form.employee_count} onChange={change} />
       <Field label="Annual revenue" name="annual_revenue" type="number" min="0" value={form.annual_revenue} onChange={change} />
     </div></fieldset>

@@ -352,7 +352,6 @@
 }
 
 .document-file-list li {
-  display: flex;
   justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-2);

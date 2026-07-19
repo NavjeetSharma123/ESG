@@ -2,6 +2,33 @@ import { supabase } from '../data/SupabaseConfig';
 import { saveUserProfile, toSession } from '../data/supabaseBackend';
 
 let currentSession = null;
+const DOCUMENTS_BUCKET = 'Documents';
+
+const sanitizeStorageFolderName = (value) => {
+  const sanitized = String(value || '')
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, '-')
+    .replace(/\s+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return sanitized;
+};
+
+const createUserDocumentsFolder = async (cinNumber) => {
+  const folderName = sanitizeStorageFolderName(cinNumber);
+  if (!folderName) throw new Error('CIN number is required to create the Documents folder.');
+
+  const marker = new Blob([''], { type: 'text/plain' });
+  const { error } = await supabase.storage
+    .from(DOCUMENTS_BUCKET)
+    .upload(`${folderName}/.keep`, marker, {
+      cacheControl: '3600',
+      contentType: 'text/plain',
+      upsert: true,
+    });
+
+  if (error) throw error;
+  return folderName;
+};
 
 export const getAuthSession = () => currentSession;
 export const isAuthenticated = () => Boolean(getAuthSession());
@@ -25,6 +52,7 @@ export const register = async (user) => {
   const { confirmPassword, ...userForInsert } = user;
   const { data, error } = await supabase.from('register').insert({ ...userForInsert, email }).select().single();
   if (error) throw error;
+  await createUserDocumentsFolder(data.cin_number || user.cin_number);
   return data;
 };
 

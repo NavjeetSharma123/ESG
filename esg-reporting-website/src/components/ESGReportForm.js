@@ -2,8 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import './ESGReportForm.css';
 import { supabase } from '../data/SupabaseConfig';
+import { fetchUserProfile } from '../data/supabaseBackend';
+import { getAuthSession } from '../utils/auth';
 import {
-  getAnswer, getLinkedQuestionIds, isAnswered, loadESGDraft,
+  getAnswer, getLinkedQuestionIds, isAnswered, loadESGAnswers,
   normalizeQuestionId, propagateLinkedAnswer, questionMatchesSector, saveESGAnswers,
 } from '../utils/answerManagement';
 
@@ -73,6 +75,47 @@ const buildStorageDocumentName = (documentType, organizationName, fileName) => {
   const organization = sanitizeDocumentPart(organizationName, 'Organization');
   return `${type}_${date}_${organization}.${getFileExtension(fileName)}`;
 };
+
+const parseFrameworkList = (value) => {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  return String(value || '').split(',').map((item) => item.trim()).filter(Boolean);
+};
+
+const frameworksFromProfile = (profile) => {
+  const savedFrameworks = parseFrameworkList(profile?.default_framework);
+  if (savedFrameworks.length) return savedFrameworks;
+  return getFrameworksForCountry(profile?.country);
+};
+
+const formDataFromProfile = (profile) => ({
+  companyName: profile?.organization_name || '',
+  industry: profile?.industry || '',
+  hqLocation: profile?.country || '',
+  esgFrameworks: frameworksFromProfile(profile),
+  employeeCount: profile?.employee_count == null ? '' : String(profile.employee_count),
+  revenue: profile?.annual_revenue == null ? '' : String(profile.annual_revenue),
+  website: profile?.website || '',
+});
+
+const buildDocumentPath = (folderName, fileName) => `${folderName}/${fileName}`;
+
+const getDocumentPathInFolder = (folderName, file) => {
+  const existingPath = file?.path || file?.name || '';
+  if (existingPath.startsWith(`${folderName}/`)) return existingPath;
+  return buildDocumentPath(folderName, existingPath.split('/').pop());
+};
+
+const documentBelongsToFolder = (folderName, file) => (
+  Boolean(folderName) && String(file?.path || '').startsWith(`${folderName}/`)
+);
+
+const filterSupportingDocumentsByFolder = (documents, folderName) => (
+  Object.keys(documents || {}).reduce((result, key) => {
+    const files = Array.isArray(documents[key]) ? documents[key] : [];
+    result[key] = files.filter((file) => documentBelongsToFolder(folderName, file));
+    return result;
+  }, {})
+);
 
 const formatFileSize = (bytes) => {
   if (!bytes) return '0 KB';
@@ -161,16 +204,15 @@ const buildQuestionWithAnswer = (question, answers) => {
   };
 };
 
-const buildQuestionJson = (allQuestions, visibleQuestions, answers) => {
+const buildQuestionJson = (allQuestions, answers) => {
   const normalizedAnswers = answers || {};
-  const visibleIds = new Set(visibleQuestions.map((question) => normalizeQuestionId(question.id)));
 
   return allQuestions.reduce((result, question) => {
     const id = normalizeQuestionId(question.id);
     if (!id) return result;
 
     const answer = getAnswer(normalizedAnswers, id);
-    result[id] = visibleIds.has(id) && isAnswered(answer) ? answer : '';
+    result[id] = isAnswered(answer) ? answer : '';
     return result;
   }, {});
 };
@@ -195,6 +237,7 @@ const ESGReportForm = () => {
   const [selectedDepartments, setSelectedDepartments] = useState([]);
   const [supportingDocuments, setSupportingDocuments] = useState({});
   const [documentStorageStatus, setDocumentStorageStatus] = useState('');
+  const [cinFolderName, setCinFolderName] = useState('');
 
   const handleQuestionAnswer = (id, value) => {
     const normalizedId = normalizeQuestionId(id);
@@ -528,12 +571,31 @@ const ESGReportForm = () => {
 
   useEffect(() => {
     if (presetCompany) return;
-    const draft = loadESGDraft();
-    if (!draft) return;
-    setFormData((prev) => ({ ...prev, ...(draft.esgData || draft.formData || {}) }));
-    setQuestionAnswers(draft.questionAnswers || draft.answers || {});
-    setSupportingDocuments(draft.supportingDocuments || {});
-    setLastSaved(draft.savedAt ? new Date(draft.savedAt) : null);
+    let cancelled = false;
+
+    Promise.all([
+      fetchUserProfile(getAuthSession()),
+      loadESGAnswers().catch((error) => {
+        console.error(error);
+        return null;
+      }),
+    ])
+      .then(([profile, draft]) => {
+        if (cancelled) return;
+        if (profile) {
+          const profileFormData = formDataFromProfile(profile);
+          setFormData((prev) => ({ ...prev, ...profileFormData }));
+        }
+        setQuestionAnswers(draft?.questionAnswers || {});
+        setLastSaved(draft?.savedAt ? new Date(draft.savedAt) : null);
+      })
+      .catch((error) => {
+        if (!cancelled) console.error(error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [presetCompany]);
   const hasFramework = (fw) => Array.isArray(formData.esgFrameworks) && formData.esgFrameworks.some((f) => f.includes(fw)); // check substring match
   const noFrameworkSelected = !Array.isArray(formData.esgFrameworks) || formData.esgFrameworks.length === 0;
@@ -818,8 +880,14 @@ const ESGReportForm = () => {
   }, [formData, progressFieldKeys, applicableQuestions, questionAnswers]);
 
   const supportingDocumentsCount = useMemo(() => (
-    Object.values(supportingDocuments).reduce((count, files) => count + (Array.isArray(files) ? files.length : 0), 0)
-  ), [supportingDocuments]);
+    Object.values(filterSupportingDocumentsByFolder(supportingDocuments, cinFolderName))
+      .reduce((count, files) => count + (Array.isArray(files) ? files.length : 0), 0)
+  ), [supportingDocuments, cinFolderName]);
+
+  const companySupportingDocuments = useMemo(
+    () => filterSupportingDocumentsByFolder(supportingDocuments, cinFolderName),
+    [supportingDocuments, cinFolderName]
+  );
 
   const filteredAnsweredCount = useMemo(() => (
     filteredQuestions.filter((question) => isAnswered(getAnswer(questionAnswers, question.id))).length
@@ -853,11 +921,51 @@ const ESGReportForm = () => {
     setHasUnsavedChanges(true);
   };
 
+  const resolveCinFolderName = async () => {
+    if (cinFolderName) return cinFolderName;
+
+    const session = getAuthSession();
+    if (!session?.id && !session?.email) {
+      throw new Error('Please sign in again before uploading documents.');
+    }
+
+    let query = supabase.from('register').select('cin_number').limit(1);
+    query = session.id ? query.eq('id', session.id) : query.eq('email', session.email);
+
+    const { data, error } = await query.maybeSingle();
+    if (error) throw error;
+
+    const folderName = sanitizeDocumentPart(data?.cin_number, '');
+    if (!folderName) throw new Error('CIN number is missing for this organization.');
+
+    setCinFolderName(folderName);
+    return folderName;
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    resolveCinFolderName()
+      .then((folderName) => {
+        if (cancelled) return;
+        setSupportingDocuments((prev) => filterSupportingDocumentsByFolder(prev, folderName));
+      })
+      .catch(() => {
+        if (!cancelled) setSupportingDocuments({});
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const uploadSupportingDocument = async (documentType, file) => {
+    const folderName = await resolveCinFolderName();
     const storageName = buildStorageDocumentName(documentType.label, formData.companyName, file.name);
+    const storagePath = buildDocumentPath(folderName, storageName);
     const { data, error } = await supabase.storage
       .from(DOCUMENTS_BUCKET)
-      .upload(storageName, file, {
+      .upload(storagePath, file, {
         cacheControl: '3600',
         contentType: file.type || 'application/octet-stream',
         upsert: true,
@@ -871,7 +979,7 @@ const ESGReportForm = () => {
       originalName: file.name,
       documentType: documentType.label,
       bucket: DOCUMENTS_BUCKET,
-      path: data?.path || storageName,
+      path: data?.path || storagePath,
       uploadedAt: new Date().toISOString(),
     };
   };
@@ -898,8 +1006,10 @@ const ESGReportForm = () => {
   const removeSupportingDocument = async (key, file) => {
     setDocumentStorageStatus(`Removing ${file.name} from Supabase...`);
     try {
-      if (file.path) {
-        const { error } = await supabase.storage.from(DOCUMENTS_BUCKET).remove([file.path]);
+      const folderName = await resolveCinFolderName();
+      const storagePath = getDocumentPathInFolder(folderName, file);
+      if (storagePath) {
+        const { error } = await supabase.storage.from(DOCUMENTS_BUCKET).remove([storagePath]);
         if (error) throw error;
       }
       setSupportingDocuments((prev) => ({
@@ -918,10 +1028,10 @@ const ESGReportForm = () => {
     if (saving) return true;
     setSaving(true); setSaveError('');
     try {
-      const questionJson = buildQuestionJson(questions, applicableQuestions, questionAnswers);
+      const questionJson = buildQuestionJson(questions, questionAnswers);
       await saveESGAnswers({ source: 'ESG', esgData: formData, questionAnswers,
         questionJson,
-        supportingDocuments, supportingDocumentsCount,
+        supportingDocuments: companySupportingDocuments, supportingDocumentsCount,
         visibleQuestions: applicableQuestions.map((q) => buildQuestionWithAnswer(q, questionAnswers)) });
       setLastSaved(new Date()); setHasUnsavedChanges(false); return true;
     } catch (error) {
@@ -947,7 +1057,7 @@ const ESGReportForm = () => {
     const answeredQuestions = applicableQuestions.map((question) =>
       buildQuestionWithAnswer(question, questionAnswers)
     );
-    const questionJson = buildQuestionJson(questions, applicableQuestions, questionAnswers);
+    const questionJson = buildQuestionJson(questions, questionAnswers);
 
     await handleSaveProgress();
 
@@ -1165,7 +1275,7 @@ const ESGReportForm = () => {
           </div>
           <div className="document-upload-grid">
             {SUPPORTING_DOCUMENTS.map((documentType) => {
-              const uploadedFiles = supportingDocuments[documentType.key] || [];
+              const uploadedFiles = companySupportingDocuments[documentType.key] || [];
               return (
                 <div className="document-upload-card" key={documentType.key}>
                   <label htmlFor={`doc-${documentType.key}`}>{documentType.label}</label>

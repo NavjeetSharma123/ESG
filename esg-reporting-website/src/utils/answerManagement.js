@@ -1,6 +1,5 @@
-export const ESG_DRAFT_KEY = 'esg-report-draft-v1';
 import { getAuthSession } from './auth';
-import { saveQuestionnaire } from '../data/supabaseBackend';
+import { fetchQuestionnaire, saveQuestionnaire } from '../data/supabaseBackend';
 
 export const normalizeQuestionId = (id) => String(id ?? '').trim();
 
@@ -64,8 +63,15 @@ export const propagateLinkedAnswer = (previous, questions, questionId, value, ma
   return updated;
 };
 
-export const loadESGDraft = () => {
-  try { return JSON.parse(localStorage.getItem(ESG_DRAFT_KEY) || 'null'); } catch (error) { return null; }
+export const loadESGDraft = () => null;
+
+export const loadESGAnswers = async () => {
+  const questionnaire = await fetchQuestionnaire(getAuthSession());
+  return {
+    questionAnswers: normalizeAnswers(questionnaire?.question_json || {}),
+    savedAt: questionnaire?.updated_at || questionnaire?.created_at || null,
+    row: questionnaire,
+  };
 };
 
 export const saveESGAnswers = async (draft) => {
@@ -78,5 +84,5 @@ export const saveESGAnswers = async (draft) => {
   }
   const savedDraft = { ...draft, savedAt: new Date().toISOString() };
   await saveQuestionnaire(getAuthSession(), savedDraft);
-  localStorage.setItem(ESG_DRAFT_KEY, JSON.stringify(savedDraft));
+  return savedDraft;
 };

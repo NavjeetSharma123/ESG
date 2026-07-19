@@ -30,6 +30,7 @@ export const toProfile = (user) => ({
   employeeCount: user.employee_count == null ? '' : String(user.employee_count),
   annualRevenue: user.annual_revenue == null ? '' : String(user.annual_revenue),
   companyType: user.company_type || '',
+  defaultFramework: user.default_framework || '',
   role: user.role || user.designation || 'ESG Reporting Member',
 });
 
@@ -90,6 +91,9 @@ export const saveQuestionnaire = async (session, draft) => {
 
   const savedAt = new Date().toISOString();
   const questionJson = draft.question_json || draft.questionJson || draft.answersByQuestionId || {};
+  const defaultFramework = Array.isArray(draft.esgData?.esgFrameworks)
+    ? draft.esgData.esgFrameworks.filter(Boolean).join(', ')
+    : '';
   const payload = { ...draft, savedAt };
   const row = {
     organization_id: organization.id,
@@ -117,6 +121,15 @@ export const saveQuestionnaire = async (session, draft) => {
     throw new Error(`Unable to check questionnaire: ${lookupError.message}`);
   }
 
+  const { error: frameworkError } = await supabase
+    .from('register')
+    .update({ default_framework: defaultFramework, updated_at: savedAt })
+    .eq('id', organization.id);
+
+  if (frameworkError) {
+    throw new Error(`Unable to save default framework: ${frameworkError.message}`);
+  }
+
   const { error } = existing
     ? await supabase.from(QUESTIONNAIRE_TABLE).update(row).eq('organization_id', organization.id)
     : await supabase.from(QUESTIONNAIRE_TABLE).insert(row);
@@ -125,4 +138,36 @@ export const saveQuestionnaire = async (session, draft) => {
     throw new Error(`Unable to save questionnaire to Supabase: ${error.message}`);
   }
   return payload;
+};
+
+export const fetchQuestionnaire = async (session) => {
+  if (!session?.id && !session?.email) throw new Error('Please sign in again before loading your questionnaire.');
+
+  let organizationQuery = supabase
+    .from('register')
+    .select('id, organization_name')
+    .limit(1);
+  organizationQuery = session.id ? organizationQuery.eq('id', session.id) : organizationQuery.eq('email', session.email);
+
+  const { data: organization, error: organizationError } = await organizationQuery.maybeSingle();
+
+  if (organizationError) {
+    throw new Error(`Unable to verify organization: ${organizationError.message}`);
+  }
+  if (!organization) {
+    throw new Error('Unable to load questionnaire because this organization is not registered.');
+  }
+
+  const { data, error } = await supabase
+    .from(QUESTIONNAIRE_TABLE)
+    .select('*')
+    .eq('organization_id', organization.id)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Unable to load questionnaire from Supabase: ${error.message}`);
+  }
+
+  return data;
 };
