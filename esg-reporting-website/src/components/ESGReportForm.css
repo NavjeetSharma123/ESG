@@ -615,6 +615,9 @@
 .esg-last-saved { display: block; margin-top: 6px; color: #64748b; text-align: right; }
 .framework-stats { margin-top: 12px; }
 .framework-stat-chip, .question-chip { border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; border-radius: 999px; padding: 4px 9px; font-size: .75rem; }
+.checkbox-group-disabled { opacity: .72; }
+.checkbox-group-disabled .checkbox-item { cursor: not-allowed; }
+.checkbox-group-disabled input { cursor: not-allowed; }
 .question-chip.linked { border-color: #a7f3d0; background: #ecfdf5; color: #047857; }
 .question-chip.required { border-color: #fecaca; background: #fef2f2; color: #b91c1c; }
 .question-tags { margin: 8px 0 12px; }

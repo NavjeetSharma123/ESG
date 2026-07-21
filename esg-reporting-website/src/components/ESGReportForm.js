@@ -3,31 +3,12 @@ import { useHistory, useLocation } from 'react-router-dom';
 import './ESGReportForm.css';
 import { supabase } from '../data/SupabaseConfig';
 import { fetchUserProfile } from '../data/supabaseBackend';
+import { ALL_FRAMEWORKS, COUNTRY_FRAMEWORKS, COUNTRY_OPTIONS, INDUSTRY_SECTOR_OPTIONS } from '../data/esgOptions';
 import { getAuthSession } from '../utils/auth';
 import {
   getAnswer, getLinkedQuestionIds, isAnswered, loadESGAnswers,
   normalizeQuestionId, propagateLinkedAnswer, questionMatchesSector, saveESGAnswers,
 } from '../utils/answerManagement';
-
-const COUNTRY_FRAMEWORKS = {
-  'United States': ['SASB', 'TCFD', 'GRI'],
-  'United Kingdom': ['TCFD', 'SASB', 'GRI'],
-  'European Union': [ 'TCFD', 'SASB', 'GRI'],
-  India: ['BRSR', 'GRI', 'SASB', 'TCFD'],
-  Canada: ['SASB', 'TCFD', 'GRI'],
-  Australia: ['SASB', 'TCFD', 'GRI'],
-  Singapore: ['SASB', 'TCFD', 'GRI'],
-  'United Arab Emirates': ['SASB', 'TCFD', 'GRI'],
-  Other: ['GRI', 'SASB', 'TCFD'],
-};
-
-const ALL_FRAMEWORKS = [
-  'GRI',
-  'SASB',
-  'TCFD',
-  'UNGC',
-  'BRSR',
-];
 
 const SUPPORTING_DOCUMENTS = [
   { key: 'financialStatements', label: 'Financial Statements' },
@@ -899,25 +880,7 @@ const ESGReportForm = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => {
-      if (name === 'hqLocation') {
-        const recommended = getFrameworksForCountry(value);
-        return { ...prev, hqLocation: value, esgFrameworks: recommended };
-      }
-      return { ...prev, [name]: value };
-    });
-    setHasUnsavedChanges(true);
-  };
-
-  const handleFrameworkToggle = (framework) => {
-    setFormData((prev) => {
-      const current = Array.isArray(prev.esgFrameworks) ? prev.esgFrameworks : [];
-      const exists = current.includes(framework);
-      const updated = exists
-        ? current.filter((fw) => fw !== framework)
-        : [...current, framework];
-      return { ...prev, esgFrameworks: updated };
-    });
+    setFormData((prev) => ({ ...prev, [name]: value }));
     setHasUnsavedChanges(true);
   };
 
@@ -1153,16 +1116,9 @@ const ESGReportForm = () => {
                 required
               >
                 <option value="">Select sector</option>
-                <option value="Technology">Technology</option>
-                <option value="Manufacturing">Manufacturing</option>
-                <option value="Finance">Finance</option>
-                <option value="Retail">Retail</option>
-                <option value="Energy">Energy</option>
-                <option value="Healthcare">Healthcare</option>
-                <option value="Transportation">Transportation</option>
-                <option value="Construction">Construction</option>
-                <option value="Agriculture">Agriculture</option>
-                <option value="Other">Other</option>
+                {INDUSTRY_SECTOR_OPTIONS.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
               </select>
             </div>
             <div className="form-group">
@@ -1187,32 +1143,27 @@ const ESGReportForm = () => {
                 required
               >
                 <option value="">Select country/region</option>
-                <option value="United States">United States</option>
-                <option value="United Kingdom">United Kingdom</option>
-                <option value="European Union">European Union</option>
-                <option value="India">India</option>
-                <option value="Canada">Canada</option>
-                <option value="Australia">Australia</option>
-                <option value="Singapore">Singapore</option>
-                <option value="United Arab Emirates">United Arab Emirates</option>
-                <option value="Other">Other</option>
+                {COUNTRY_OPTIONS.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
               </select>
             </div>
             <div className="form-group full">
               <label htmlFor="esgFrameworks">ESG Reporting Frameworks</label>
               <p className="field-helper">
-                Recommended for{' '}
+                Selected from your saved organization profile. Recommended for{' '}
                 {formData.hqLocation || 'selected country'}
                 : {getFrameworksForCountry(formData.hqLocation).join(', ') || 'N/A'}
               </p>
-              <div id="esgFrameworks" className="checkbox-group">
+              <div id="esgFrameworks" className="checkbox-group checkbox-group-disabled">
                 {ALL_FRAMEWORKS.map((fw) => (
                   <label key={fw} className="checkbox-item">
                     <input
                       type="checkbox"
                       value={fw}
                       checked={Array.isArray(formData.esgFrameworks) && formData.esgFrameworks.includes(fw)}
-                      onChange={() => handleFrameworkToggle(fw)}
+                      disabled
+                      readOnly
                     />
                     <span>{fw}</span>
                   </label>
@@ -1224,7 +1175,7 @@ const ESGReportForm = () => {
                 </span>)}
               </div>}
               <small>
-                Select all frameworks you report against. You can include frameworks beyond the recommended list.
+                Frameworks are loaded from the database and cannot be changed from this form.
               </small>
             </div>
             <div className="form-group">

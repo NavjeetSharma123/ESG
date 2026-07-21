@@ -1,7 +1,32 @@
 import { supabase } from '../data/SupabaseConfig';
 import { saveUserProfile, toSession } from '../data/supabaseBackend';
 
-let currentSession = null;
+const AUTH_SESSION_KEY = 'sustanica.auth.session';
+
+const loadStoredSession = () => {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return null;
+    const stored = window.localStorage.getItem(AUTH_SESSION_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch (error) {
+    return null;
+  }
+};
+
+const persistSession = (session) => {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    if (session) {
+      window.localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+    } else {
+      window.localStorage.removeItem(AUTH_SESSION_KEY);
+    }
+  } catch (error) {
+    // Storage may be blocked; in-memory auth still works for the current tab.
+  }
+};
+
+let currentSession = loadStoredSession();
 const DOCUMENTS_BUCKET = 'Documents';
 
 const sanitizeStorageFolderName = (value) => {
@@ -44,6 +69,7 @@ export const login = async (usernameOrEmail, password) => {
   if (error) throw error;
   if (!user || user.is_active === false) return null;
   currentSession = toSession(user);
+  persistSession(currentSession);
   return currentSession;
 };
 
@@ -60,7 +86,12 @@ export const updateProfile = async (updates) => {
   const session = getAuthSession(); if (!session) return null;
   const user = await saveUserProfile(session, updates.profile || updates);
   const next = { ...session, ...toSession(user), ...updates };
-  currentSession = next; return next;
+  currentSession = next;
+  persistSession(currentSession);
+  return next;
 };
 
-export const logout = () => { currentSession = null; };
+export const logout = () => {
+  currentSession = null;
+  persistSession(null);
+};

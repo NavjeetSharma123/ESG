@@ -109,7 +109,7 @@ const FinalReportPage = () => {
     ['Waste generated', flatData.wasteGenerated, 't'], ['Employee diversity', flatData.genderDiversityPercent, '%'],
     ['Safety incidents', flatData.safetyIncidents, ''], ['Board diversity', flatData.independentDirectorsPercent, '%'],
   ];
-
+console.log("Flat Data:",flatData)
   const safeName = String(companyName).replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-');
   const handlePDF = async () => {
     try {

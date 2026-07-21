@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, Redirect, useHistory } from 'react-router-dom';
 import { isAuthenticated, login, register } from '../utils/auth';
+import { COUNTRY_OPTIONS, INDUSTRY_SECTOR_OPTIONS } from '../data/esgOptions';
 import './LoginPage.css';
 
 const initialForm = {
@@ -14,6 +15,16 @@ const Field = ({ label, name, value, onChange, type = 'text', required = false, 
   <div className="register-field">
     <label htmlFor={name}>{label}{required ? ' *' : ''}</label>
     <input id={name} name={name} type={type} value={value} onChange={onChange} required={required} {...props} />
+  </div>
+);
+
+const SelectField = ({ label, name, value, onChange, options, placeholder, required = false }) => (
+  <div className="register-field">
+    <label htmlFor={name}>{label}{required ? ' *' : ''}</label>
+    <select id={name} name={name} value={value} onChange={onChange} required={required}>
+      <option value="">{placeholder}</option>
+      {options.map((option) => <option key={option} value={option}>{option}</option>)}
+    </select>
   </div>
 );
 
@@ -74,20 +85,15 @@ const RegisterPage = () => {
   return <main className="login-page"><section className="login-panel register-panel"><span className="login-kicker">Create your workspace</span><h1>Register</h1><p>Provide your organisation and account details to create your workspace.</p><form className="login-form" onSubmit={handleSubmit}>
     <fieldset className="register-section"><legend>Organisation details</legend><div className="register-grid">
       <Field label="Organisation name" name="organization_name" value={form.organization_name} onChange={change} required />
-      <Field label="Industry" name="industry" value={form.industry} onChange={change} required />
-      <Field label="Sector" name="sector" value={form.sector} onChange={change} required />
-      <Field label="Company type" name="company_type" value={form.company_type} onChange={change} required />
-      <Field label="Website" name="website" type="url" value={form.website} onChange={change} placeholder="https://example.com" />
-      <Field label="Registration number" name="registration_number" value={form.registration_number} onChange={change} />
-      <Field label="GST number" name="gst_number" value={form.gst_number} onChange={change} />
+      <SelectField label="Industry" name="industry" value={form.industry} onChange={change} options={INDUSTRY_SECTOR_OPTIONS} placeholder="Select industry" required />
+      <SelectField label="Sector" name="sector" value={form.sector} onChange={change} options={INDUSTRY_SECTOR_OPTIONS} placeholder="Select sector" required />
+      <Field label="Website" name="website" type="url" value={form.website} onChange={change} placeholder="https://example.com" required/>
+      <Field label="Registration number" name="registration_number" value={form.registration_number} onChange={change} required/>
+      <Field label="GST number" name="gst_number" value={form.gst_number} onChange={change} required/>
       <Field label="CIN number" name="cin_number" value={form.cin_number} onChange={change} required />
-      <Field label="Employee count" name="employee_count" type="number" min="0" value={form.employee_count} onChange={change} />
-      <Field label="Annual revenue" name="annual_revenue" type="number" min="0" value={form.annual_revenue} onChange={change} />
-    </div></fieldset>
-    <fieldset className="register-section"><legend>Location</legend><div className="register-grid">
-      <Field label="Country" name="country" value={form.country} onChange={change} required />
-      <Field label="State" name="state" value={form.state} onChange={change} required />
-      <Field label="City" name="city" value={form.city} onChange={change} required />
+      <Field label="Employee count" name="employee_count" type="number" min="0" value={form.employee_count} onChange={change} required/>
+      <Field label="Annual revenue" name="annual_revenue" type="number" min="0" value={form.annual_revenue} onChange={change} required/>
+      <SelectField label="Country" name="country" value={form.country} onChange={change} options={COUNTRY_OPTIONS} placeholder="Select country/region" required />
     </div></fieldset>
     <fieldset className="register-section"><legend>Account contact</legend><div className="register-grid">
       <Field label="First name" name="first_name" value={form.first_name} onChange={change} required />

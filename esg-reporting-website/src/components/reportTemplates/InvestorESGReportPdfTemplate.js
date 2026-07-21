@@ -118,7 +118,98 @@ export const generateInvestorESGReportPDF = ({ companyName, industry, reportingP
 
   addPage('Data quality and automation'); bookmark('Data quality and automation'); title('Data quality and automation', 'How to read this report'); const evidence = Number(visualData.evidenceCount || 0); const automated = Number(visualData.autoPopulated || 0) + Number(visualData.reused || 0); const total = Math.max(Number(visualData.totalQuestions) || count, 1); card(margin, y, (contentWidth - 5) / 2, 'Evidence', `${evidence}`, evidence ? 'Supporting records uploaded to the reporting workspace' : 'No supporting records uploaded; disclosures are unverified', evidence ? GREEN : RED); card(margin + (contentWidth + 5) / 2, y, (contentWidth - 5) / 2, 'Automation', `${Math.round(automated / total * 100)}`, `${automated} answers mapped or pre-populated from ${total} disclosures`, AMBER); y += 37; text('Evidence is the count of supporting documents uploaded to the reporting workspace; it is not an assurance conclusion and does not confirm the accuracy of a disclosure. Automation is the percentage of disclosure responses that were pre-populated or reused through framework mapping. It reduces data-entry effort, but every automated response still requires owner review and evidence validation.', { size: 9, line: 4.7 });
 
-  groups.forEach((group) => { addPage(group.framework); bookmark(group.framework); title(group.framework, 'Topic-led disclosures'); group.subsections.forEach((section) => { ensure(16); set('setFillColor', MINT); set('setDrawColor', LINE); doc.roundedRect(margin, y - 2, contentWidth, 11, 2, 2, 'FD'); doc.setFont('helvetica', 'bold'); doc.setFontSize(10); set('setTextColor', GREEN_DARK); doc.text(section.name, margin + 5, y + 5); y += 15; section.questions.forEach((question) => { const answer = responseFor(question); const [status, statusColor] = statusFor(question, answer); const frameworks = frameworksOf(question); const tags = frameworks.length ? frameworks.join(' | ') : 'No framework tag'; const disclosureLines = doc.splitTextToSize(clean(question.question), contentWidth - 22); const responseLines = doc.splitTextToSize(clean(answer), contentWidth - 22); const h = Math.max(40, 18 + disclosureLines.length * 4.5 + responseLines.length * 4.2); ensure(h + 4); set('setFillColor', [255, 255, 255]); set('setDrawColor', LINE); doc.roundedRect(margin, y, contentWidth, h, 2.5, 2.5, 'FD'); chip(status, statusColor, width - margin - 31, y + 7); label('Disclosure', margin + 6, y + 7); doc.setFont('helvetica', 'bold'); doc.setFontSize(9.1); set('setTextColor', INK); doc.text(disclosureLines, margin + 6, y + 13); const responseY = y + 16 + disclosureLines.length * 4.5; label('Company response', margin + 6, responseY); doc.setFont('helvetica', 'normal'); doc.setFontSize(8.4); set('setTextColor', INK); doc.text(responseLines, margin + 6, responseY + 5); const metaY = y + h - 8; label(`Evidence / source: ${question.evidence || question.source || (evidence ? 'Workspace evidence available - link source before publication' : 'No source attached')}`, margin + 6, metaY, evidence ? GREEN : RED); label(`Assurance status: ${question.assuranceStatus || (evidence ? 'Not assured' : 'Evidence pending')}`, margin + 6, metaY + 4); label(`Framework tags: ${tags}`, margin + 78, metaY); y += h + 4; if (isMetric(question, answer)) metricTable(question, answer); if (/year.?on.?year.*emission|emission.*trend/.test(clean(question.question).toLowerCase())) emissionsChart(); }); }); });
+  const renderSectionHeading = (sectionName) => {
+    ensure(16);
+    set('setFillColor', MINT);
+    set('setDrawColor', LINE);
+    doc.roundedRect(margin, y - 2, contentWidth, 11, 2, 2, 'FD');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    set('setTextColor', GREEN_DARK);
+    doc.text(clean(sectionName), margin + 5, y + 5);
+    y += 15;
+  };
+
+  const renderDisclosureCard = (question, groupTitle) => {
+    const answer = responseFor(question);
+    const [status, statusColor] = statusFor(question, answer);
+    const frameworks = frameworksOf(question);
+    const tags = frameworks.length ? frameworks.join(' | ') : 'No framework tag';
+    const disclosureLines = doc.splitTextToSize(clean(question.question), contentWidth - 22);
+    const responseLines = doc.splitTextToSize(clean(answer), contentWidth - 22);
+    const responseLineHeight = 4.2;
+    const disclosureLineHeight = 4.5;
+    const metaReserve = 14;
+    const bottomY = height - 20;
+    let remainingResponseLines = responseLines.length ? responseLines.slice() : ['Not disclosed'];
+    let isFirstCard = true;
+
+    while (isFirstCard || remainingResponseLines.length) {
+      if (y + 38 > bottomY) addPage(groupTitle);
+
+      const disclosureBlockHeight = isFirstCard ? disclosureLines.length * disclosureLineHeight + 16 : 10;
+      const availableHeight = Math.max(34, bottomY - y);
+      const maxLinesWithMeta = Math.max(1, Math.floor((availableHeight - disclosureBlockHeight - metaReserve - 8) / responseLineHeight));
+      const isLastCard = remainingResponseLines.length <= maxLinesWithMeta;
+      const maxLines = isLastCard
+        ? maxLinesWithMeta
+        : Math.max(1, Math.floor((availableHeight - disclosureBlockHeight - 8) / responseLineHeight));
+      const segmentLines = remainingResponseLines.splice(0, maxLines);
+      const cardHeight = Math.max(
+        40,
+        disclosureBlockHeight + segmentLines.length * responseLineHeight + (isLastCard ? metaReserve : 8)
+      );
+
+      set('setFillColor', [255, 255, 255]);
+      set('setDrawColor', LINE);
+      doc.roundedRect(margin, y, contentWidth, cardHeight, 2.5, 2.5, 'FD');
+      chip(isFirstCard ? status : `${status} continued`, statusColor, width - margin - 43, y + 7);
+
+      let cursorY = y + 7;
+      if (isFirstCard) {
+        label('Disclosure', margin + 6, cursorY);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9.1);
+        set('setTextColor', INK);
+        doc.text(disclosureLines, margin + 6, cursorY + 6);
+        cursorY += 9 + disclosureLines.length * disclosureLineHeight;
+      } else {
+        label('Company response continued', margin + 6, cursorY);
+        cursorY += 6;
+      }
+
+      label(isFirstCard ? 'Company response' : 'Response continued', margin + 6, cursorY);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.4);
+      set('setTextColor', INK);
+      doc.text(segmentLines, margin + 6, cursorY + 5);
+
+      if (isLastCard) {
+        const metaY = y + cardHeight - 9;
+        label(`Evidence / source: ${question.evidence || question.source || (evidence ? 'Workspace evidence available - link source before publication' : 'No source attached')}`, margin + 6, metaY, evidence ? GREEN : RED);
+        label(`Assurance status: ${question.assuranceStatus || (evidence ? 'Not assured' : 'Evidence pending')}`, margin + 6, metaY + 4);
+        label(`Framework tags: ${tags}`, margin + 78, metaY);
+      } else {
+        label('Continued on next page', margin + 6, y + cardHeight - 5, MUTED);
+      }
+
+      y += cardHeight + 4;
+      isFirstCard = false;
+    }
+
+    if (isMetric(question, answer)) metricTable(question, answer);
+    if (/year.?on.?year.*emission|emission.*trend/.test(clean(question.question).toLowerCase())) emissionsChart();
+  };
+
+  groups.forEach((group) => {
+    addPage(group.framework);
+    bookmark(group.framework);
+    title(group.framework, 'Topic-led disclosures');
+    group.subsections.forEach((section) => {
+      renderSectionHeading(section.name);
+      section.questions.forEach((question) => renderDisclosureCard(question, group.framework));
+    });
+  });
 
   addPage('Assurance statement'); bookmark('Assurance statement'); title('Assurance statement', 'External assurance'); text(`Assurance provider: ${clean(assurance.provider) || 'Not appointed'}\nScope: ${clean(assurance.scope) || 'No assurance scope has been defined'}\nStandard used: ${clean(assurance.standard) || 'Not specified'}\nLevel of assurance: ${clean(assurance.level) || 'Not assured'}\nLimitations: ${clean(assurance.limitations) || 'This report is a management-prepared draft. Evidence availability, completeness and the accuracy of disclosures have not been independently assured.'}`, { size: 9.5, line: 5.4 }); y += 7; text('No statement in this report should be read as an independent assurance opinion unless a named assurance provider, scope, standard and level of assurance are completed above.', { size: 8.5, line: 4.3, color: RED, font: 'bold' });
 
