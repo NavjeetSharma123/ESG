@@ -85,7 +85,6 @@ const RegisterPage = () => {
   return <main className="login-page"><section className="login-panel register-panel"><span className="login-kicker">Create your workspace</span><h1>Register</h1><p>Provide your organisation and account details to create your workspace.</p><form className="login-form" onSubmit={handleSubmit}>
     <fieldset className="register-section"><legend>Organisation details</legend><div className="register-grid">
       <Field label="Organisation name" name="organization_name" value={form.organization_name} onChange={change} required />
-      <SelectField label="Industry" name="industry" value={form.industry} onChange={change} options={INDUSTRY_SECTOR_OPTIONS} placeholder="Select industry" required />
       <SelectField label="Sector" name="sector" value={form.sector} onChange={change} options={INDUSTRY_SECTOR_OPTIONS} placeholder="Select sector" required />
       <Field label="Website" name="website" type="url" value={form.website} onChange={change} placeholder="https://example.com" required/>
       <Field label="Registration number" name="registration_number" value={form.registration_number} onChange={change} required/>

@@ -713,7 +713,7 @@ const ESGReportForm = () => {
       );
     }
 
-    if (noFrameworkSelected || hasFramework('GRI') || hasFramework('UN Global Compact') || hasFramework('CDP')) {
+    if (noFrameworkSelected || hasFramework('GRI') || hasFramework('UNGC') || hasFramework('CDP')) {
       keys.push(
         'scope3Emissions',
         'energyConsumption',
@@ -725,7 +725,7 @@ const ESGReportForm = () => {
       );
     }
 
-    if (noFrameworkSelected || hasFramework('GRI') || hasFramework('UN Global Compact') || hasFramework('BRSR')) {
+    if (noFrameworkSelected || hasFramework('GRI') || hasFramework('UNGC') || hasFramework('BRSR')) {
       keys.push(
         'totalEmployees',
         'genderDiversityPercent',
