@@ -65,15 +65,15 @@ const DemoForm = ({ onClose }) => {
   };
 
   const serviceOptions = [
-    'ESG Report Generation',
-    'Carbon Accounting',
-    'Financial Reporting',
-    'Supply Chain Sustainability',
-    'Green Assessment',
-    'Social ESG Reporting',
-    'Sustainability Scoring',
-    'Emissions Reduction',
-    'Compliance Reports',
+    'ESG Report Generation [GRI, SASB, BRSR, UNGC]',
+    'Carbon Accounting[TCFD, GRI, BRSR]',
+    'Financial Reporting[TCFD, SASB, GRI]',
+    'Supply Chain Sustainability[GRI, UNGC, BRSR]',
+    'Green Assessment[GRI, TCFD]',
+    'Social ESG Reporting[GRI, UNGC, BRSR]',
+    'Sustainability Scoring[GRI, SASB]',
+    'Emissions Reduction[TCFD, GRI, BRSR]',
+    'Compliance Reports[BRSR, GRI, TCFD]'
   ];
 
   const formContent = (
@@ -117,6 +117,8 @@ const DemoForm = ({ onClose }) => {
               name="email"
               value={formData.email}
               onChange={handleChange}
+              pattern="^(?!.*@(gmail|yahoo|hotmail|outlook|live|msn|icloud|aol|protonmail|zoho|gmx|mail)\.).+$"
+              title="Please enter your official work email address."
               required
             />
           </div>
@@ -201,7 +203,7 @@ const DemoForm = ({ onClose }) => {
             </div>
           </div>
           <div className="form-group">
-            <label htmlFor="website">Website</label>
+            <label htmlFor="website">Website *</label>
             <input
               type="url"
               id="website"
@@ -209,6 +211,7 @@ const DemoForm = ({ onClose }) => {
               placeholder="https://"
               value={formData.website}
               onChange={handleChange}
+              required
             />
           </div>
           <div className="form-row">
@@ -221,16 +224,6 @@ const DemoForm = ({ onClose }) => {
                 value={formData.country}
                 onChange={handleChange}
                 required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="city">City</label>
-              <input
-                type="text"
-                id="city"
-                name="city"
-                value={formData.city}
-                onChange={handleChange}
               />
             </div>
           </div>
