@@ -23,7 +23,6 @@ const SUPPORTING_DOCUMENTS = [
   { key: 'companyPolicies', label: 'Company Policies (HR, Ethics, Anti-Harassment)' },
   { key: 'managementMeetingMinutes', label: 'Management Meeting Minutes' },
   { key: 'esgCsrEvidence', label: 'ESG/CSR Activities Evidence (photos, invoices, receipts)' },
-  { key: 'isoCertificates', label: 'ISO Certificates (if applicable)' },
 ];
 
 const FILE_ACCEPT_TYPES = '.pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg';
