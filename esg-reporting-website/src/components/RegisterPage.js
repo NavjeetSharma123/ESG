@@ -17,7 +17,26 @@ const Field = ({ label, name, value, onChange, type = 'text', required = false, 
     <input id={name} name={name} type={type} value={value} onChange={onChange} required={required} {...props} />
   </div>
 );
+function isValid_CIN_Number(str) {
+  // Regex to check valid
+  // CIN Number
+  let regex = new RegExp(/^([LUu]{1})([0-9]{5})([A-Za-z]{2})([0-9]{4})([A-Za-z]{3})([0-9]{6})$/);
 
+  //if str
+  // is empty return false
+  if (str == null) {
+      return false;
+  }
+
+  // Return true if the str
+  // matched the ReGex
+  if (regex.test(str) == true) {
+      return true;
+  }
+  else {
+      return false;
+  }
+}
 const SelectField = ({ label, name, value, onChange, options, placeholder, required = false }) => (
   <div className="register-field">
     <label htmlFor={name}>{label}{required ? ' *' : ''}</label>
@@ -54,7 +73,7 @@ const RegisterPage = () => {
     event.preventDefault();
     if (form.password.length < 8) return setError('Use a password with at least 8 characters.');
     if (form.password !== form.confirmPassword) return setError('Passwords do not match.');
-    if (!form.cin_number.trim()) return setError('CIN number is required to create your Documents folder.');
+    if (!form.cin_number.trim() || !isValid_CIN_Number(form.cin_number)) return setError('CIN number is invalid.');
     if (!acceptedTerms) return setError('Please accept the Terms and Conditions to register.');
     setSending(true);
     try {
@@ -89,7 +108,7 @@ const RegisterPage = () => {
       <Field label="Website" name="website" type="url" value={form.website} onChange={change} placeholder="https://example.com" required/>
       <Field label="Registration number" name="registration_number" value={form.registration_number} onChange={change} required/>
       <Field label="GST number" name="gst_number" value={form.gst_number} onChange={change} required/>
-      <Field label="CIN number" name="cin_number" value={form.cin_number} onChange={change} required />
+      <Field label="CIN number" name="cin_number" value={form.cin_number} onChange={change} required maxlength='21'/>
       <Field label="Employee count" name="employee_count" type="number" min="0" value={form.employee_count} onChange={change} required/>
       <Field label="Annual revenue" name="annual_revenue" type="number" min="0" value={form.annual_revenue} onChange={change} required/>
       <SelectField label="Country" name="country" value={form.country} onChange={change} options={COUNTRY_OPTIONS} placeholder="Select country/region" required />
