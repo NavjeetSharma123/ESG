@@ -1,30 +1,36 @@
 import React, { useState } from 'react';
+import emailjs from '@emailjs/browser';
 import { Link } from 'react-router-dom';
 import Button from './ui/Button';
 import Container from './ui/Container';
 import './DemoForm.css';
 
+const initialFormData = {
+  // Contact
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  jobTitle: '',
+  // Company
+  companyName: '',
+  industry: '',
+  companySize: '',
+  website: '',
+  country: '',
+  city: '',
+  // Needs
+  servicesInterest: [],
+  timeline: '',
+  budget: '',
+  message: '',
+};
+
 const DemoForm = ({ onClose }) => {
-  const [formData, setFormData] = useState({
-    // Contact
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    jobTitle: '',
-    // Company
-    companyName: '',
-    industry: '',
-    companySize: '',
-    website: '',
-    country: '',
-    city: '',
-    // Needs
-    servicesInterest: [],
-    timeline: '',
-    budget: '',
-    message: '',
-  });
+  const [formData, setFormData] = useState(initialFormData);
+  const [submitStatus, setSubmitStatus] = useState('');
+  const [submitError, setSubmitError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
@@ -41,27 +47,41 @@ const DemoForm = ({ onClose }) => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Demo request submitted:', formData);
-    setFormData({
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      jobTitle: '',
-      companyName: '',
-      industry: '',
-      companySize: '',
-      website: '',
-      country: '',
-      city: '',
-      servicesInterest: [],
-      timeline: '',
-      budget: '',
-      message: '',
-    });
-    if (onClose) onClose();
+    setSubmitStatus('');
+    setSubmitError('');
+
+    const serviceId = process.env.REACT_APP_EMAILJS_SERVICE_ID;
+    const templateId = process.env.REACT_APP_EMAILJS_TEMPLATE_ID;
+    const publicKey = process.env.REACT_APP_EMAILJS_PUBLIC_KEY;
+
+    if (!serviceId || !templateId || !publicKey) {
+      setSubmitError('Email service is not configured. Please try again later.');
+      return;
+    }
+
+    const templateParams = {
+      ...formData,
+      fullName: `${formData.firstName} ${formData.lastName}`.trim(),
+      servicesInterest: formData.servicesInterest.join(', '),
+    };
+
+    setIsSubmitting(true);
+
+    try {
+      await emailjs.send(serviceId, templateId, templateParams, {
+        publicKey,
+      });
+      setSubmitStatus('Thanks. Your demo request has been sent.');
+      setFormData(initialFormData);
+      if (onClose) onClose();
+    } catch (error) {
+      console.error('Demo request email failed:', error);
+      setSubmitError('We could not send your request right now. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const serviceOptions = [
@@ -226,6 +246,16 @@ const DemoForm = ({ onClose }) => {
                 required
               />
             </div>
+            <div className="form-group">
+              <label htmlFor="city">City</label>
+              <input
+                type="text"
+                id="city"
+                name="city"
+                value={formData.city}
+                onChange={handleChange}
+              />
+            </div>
           </div>
         </section>
 
@@ -274,10 +304,10 @@ const DemoForm = ({ onClose }) => {
                 onChange={handleChange}
               >
                 <option value="">Select budget</option>
-                <option value="Under 10k">Under $10k</option>
-                <option value="10k-50k">$10k - $50k</option>
-                <option value="50k-100k">$50k - $100k</option>
-                <option value="100k+">$100k+</option>
+                <option value="Under 10k">Under INR 10k</option>
+                <option value="10k-50k">INR 10k - INR 50k</option>
+                <option value="50k-100k">INR 50k - INR 100k</option>
+                <option value="100k+">INR 100k+</option>
               </select>
             </div>
           </div>
@@ -295,11 +325,11 @@ const DemoForm = ({ onClose }) => {
         </section>
 
         <div className="form-actions">
-          <Button type="submit" variant="primary">
-            Submit request
+          <Button type="submit" variant="primary" disabled={isSubmitting}>
+            {isSubmitting ? 'Sending...' : 'Submit request'}
           </Button>
           {onClose ? (
-            <Button type="button" variant="secondary" onClick={onClose}>
+            <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </Button>
           ) : (
@@ -308,6 +338,8 @@ const DemoForm = ({ onClose }) => {
             </Button>
           )}
         </div>
+        {submitStatus ? <p className="demo-form__status" role="status">{submitStatus}</p> : null}
+        {submitError ? <p className="demo-form__status demo-form__status--error" role="alert">{submitError}</p> : null}
       </form>
     </>
   );

@@ -136,11 +136,11 @@ const RegisterPage = () => {
       <div className="terms-modal__body">
       <br></br>[Platform / Product Name]
       <br></br>Operated by:
-<br></br>[Company Legal Name]
+<br></br>"Sustanica"
 <br></br>[Registered Office Address]
 <br></br>([Company Registration / CIN Number])
 <br></br>Last Updated / Effective Date: [DD Month YYYY]
-<br></br>These Terms and Conditions ("Terms", "Agreement") constitute a legally binding agreement between the entity or individual accessing or using the platform ("Customer", "Organization", "User", "you", "your") and [Company Legal Name], a company incorporated under the laws of [Country/State of Incorporation], having its registered office at [Registered Office Address] ("Company", "we", "us", "our"), governing your access to and use of the [Platform Name] ESG data management, questionnaire, reporting, benchmarking, and analytics platform, together with all related websites, applications, APIs, dashboards, and services (collectively, the "Platform" or "Services").
+<br></br>These Terms and Conditions ("Terms", "Agreement") constitute a legally binding agreement between the entity or individual accessing or using the platform ("Customer", "Organization", "User", "you", "your") and "Sustanica", a company incorporated under the laws of India, governing your access to and use of the Sustanica's ESG data management, questionnaire, reporting, benchmarking, and analytics platform, together with all related websites, applications, APIs, dashboards, and services (collectively, the "Platform" or "Services").
 <br></br>Please read these Terms carefully. They contain important disclaimers regarding the informational nature of ESG reports, scores, benchmarks, and AI-generated recommendations, and limitations on liability. By accessing, registering for, or using the Platform, you agree to be bound by these Terms and by our Privacy Policy, which is incorporated herein by reference.
 <br></br>1. Acceptance of Terms
 <br></br>1.1  By creating an account, clicking "I Accept", or otherwise accessing or using the Platform, you confirm that you have read, understood, and agree to be bound by these Terms, our Privacy Policy, and any additional guidelines, order forms, or annexures referenced herein.
@@ -179,8 +179,8 @@ const RegisterPage = () => {
 <br></br>5.6  Refund Policy. Except as expressly set out in an applicable Order Form or as mandated by applicable consumer protection law, all fees are non-refundable. Without limiting the foregoing:
 <br></br>(a) Dissatisfaction with the format, layout, structure, or presentation of a generated ESG Report, where such format was represented in the Sample Report, shall not, by itself, entitle the User to a refund.
 <br></br>(b) No refund shall be issued for reports already generated, downloaded, or made available for download, save where such report was demonstrably not generated due to a verified technical fault attributable solely to the Company.
-<br></br>(c) Refund requests must be submitted in writing to [Billing Support Email] within [Number] days of the relevant charge and are subject to the Company's review and approval.
-<br></br>5.7  The Company reserves the right to modify subscription fees prospectively upon at least [Number] days' prior written notice. Continued use of the Platform after the effective date of a fee change constitutes acceptance of the revised fees.
+<br></br>(c) Refund requests must be submitted in writing to esgreportingcontact@gmail.com within 7 days of the relevant charge and are subject to the Company's review and approval.
+<br></br>5.7  The Company reserves the right to modify subscription fees prospectively upon at least 14 days' prior written notice. Continued use of the Platform after the effective date of a fee change constitutes acceptance of the revised fees.
 <br></br>5.8  Failure to pay undisputed fees when due may result in suspension or termination of access in accordance with Section 21 (Suspension & Termination).
 <br></br>6. Scope of Services
 <br></br>6.1  Subject to these Terms and an active Subscription, the Company grants the Customer a non-exclusive, non-transferable, revocable right to access and use the Platform for its internal business purposes, including to:
@@ -204,7 +204,7 @@ const RegisterPage = () => {
 <br></br>8.1  Customer Ownership. As between the Company and the Customer, the Customer retains all right, title, and interest in and to all User Content, including uploaded Documents, Questionnaire responses, and any proprietary data submitted to the Platform ("Customer Data"). Nothing in these Terms transfers ownership of Customer Data to the Company.
 <br></br>8.2  Limited License to the Company. The Customer grants the Company a limited, non-exclusive, worldwide, royalty-free license to access, host, store, process, reproduce, and display Customer Data solely to the extent necessary to: (i) provide, maintain, and support the Platform and Services; (ii) generate ESG Reports, benchmarks, dashboards, and AI Recommendations requested by the Customer; (iii) provide customer support; and (iv) comply with applicable law. This license terminates upon deletion of the relevant Customer Data or closure of the Account, subject to Section 8.4 and the Company's standard back-up and legal retention cycles.
 <br></br>8.3  Aggregated and Anonymized Data. The Company may create aggregated and/or anonymized data derived from Customer Data, which does not identify the Customer or any individual, for purposes including Benchmarking Data, product improvement, research, and industry insights. The Company owns such aggregated/anonymized data, provided it cannot reasonably be used to re-identify the Customer.
-<br></br>8.4  Upon termination of the Subscription, the Customer may export its Customer Data for a period of [Number] days, after which the Company may delete such data from its active systems in accordance with its data retention policy and Section 15 (Privacy & Data Protection), save where retention is required by law.
+<br></br>8.4  Upon termination of the Subscription, the Customer may export its Customer Data for a period of 7 days, after which the Company may delete such data from its active systems in accordance with its data retention policy and Section 15 (Privacy & Data Protection), save where retention is required by law.
 <br></br>8.5  The Company does not claim ownership over any Customer Data and will not sell Customer Data to third parties.
 <br></br>9. AI Recommendation Disclaimer
 <br></br>This section contains important disclaimers regarding artificial intelligence features. Please read carefully.
@@ -258,7 +258,7 @@ const RegisterPage = () => {
 <br></br>15.4  GDPR Commitments. Where the GDPR applies, the Company shall: (i) process personal data only on documented instructions from the Customer, save where required by law; (ii) ensure persons authorized to process personal data are bound by confidentiality; (iii) implement appropriate technical and organizational measures; (iv) assist the Customer in responding to data subject requests and in complying with its obligations relating to data protection impact assessments and breach notifications; and (v) delete or return personal data at the end of the provision of services, subject to legal retention requirements.
 <br></br>15.5  DPDP Act Commitments. Where the DPDP Act applies, the Company shall process personal data only for the specified purpose of providing the Services, implement reasonable security safeguards to prevent personal data breaches, assist the Customer (as Data Fiduciary) in fulfilling its obligations to Data Principals, and notify the Customer without undue delay upon becoming aware of a personal data breach affecting Customer Data.
 <br></br>15.6  Users are responsible for obtaining any necessary consents from data subjects (e.g., employees, suppliers) prior to submitting their personal data to the Platform, and for ensuring a lawful basis exists for such processing.
-<br></br>15.7  Users may exercise applicable data subject rights (access, correction, erasure, portability, objection) by contacting [Data Protection/Privacy Contact Email]. The Company will respond in accordance with Applicable Data Protection Laws.
+<br></br>15.7  Users may exercise applicable data subject rights (access, correction, erasure, portability, objection) by contacting "esgreportingcontact@gmail.com". The Company will respond in accordance with Applicable Data Protection Laws.
 <br></br>15.8  The Company shall not sell personal data to third parties and shall not use Customer Data for third-party advertising purposes.
 <br></br>16. Security Measures
 <br></br>16.1  The Company implements administrative, technical, and physical safeguards designed to protect the confidentiality, integrity, and availability of Customer Data, including encryption of data in transit and at rest, role-based access controls, logging and monitoring, and periodic security assessments.
@@ -283,13 +283,13 @@ const RegisterPage = () => {
 <br></br>20. Payments
 <br></br>20.1  Payments shall be made in the currency and through the payment methods specified on the Platform or in the applicable Order Form, via the Company's designated payment processor(s).
 <br></br>20.2  The Customer authorizes the Company (or its payment processor) to charge the designated payment method for all applicable fees, including recurring Subscription renewals, unless cancelled in accordance with Section 5.
-<br></br>20.3  Late payments may accrue interest at the rate of [Number]% per month or the maximum rate permitted by applicable law, whichever is lower, and may result in suspension of access under Section 21.
+<br></br>20.3  Late payments may accrue interest at the rate of 5% per month or the maximum rate permitted by applicable law, whichever is lower, and may result in suspension of access under Section 21.
 <br></br>20.4  The Customer is responsible for providing accurate billing information and promptly updating it upon any change, including changes to payment instruments or billing contacts.
-<br></br>20.5  All invoices shall be deemed accepted unless disputed in writing within [Number] days of the invoice date.
+<br></br>20.5  All invoices shall be deemed accepted unless disputed in writing within 7 days of the invoice date.
 <br></br>21. Suspension & Termination
 <br></br>21.1  Either party may terminate these Terms for the Customer's convenience by providing written notice in accordance with Section 5.4, subject to any minimum term specified in an Order Form.
 <br></br>21.2  The Company may suspend or terminate access to the Platform, in whole or in part, immediately upon notice, if:
-<br></br>(a) The Customer fails to pay undisputed fees within [Number] days of the due date;
+<br></br>(a) The Customer fails to pay undisputed fees within 7 days of the due date;
 <br></br>(b) The Customer materially breaches these Terms and fails to cure such breach within [Number] days of written notice (where curable);
 <br></br>(c) The Company reasonably believes the Customer's use of the Platform poses a security risk, legal liability, or violates the Acceptable Use Policy;
 <br></br>(d) Required to comply with applicable law or a competent authority's order.
@@ -327,7 +327,7 @@ const RegisterPage = () => {
 <br></br>27.3  Continued use of the Platform after the effective date of any amendment constitutes acceptance of the revised Terms. If the Customer does not agree to the revised Terms, it may terminate its Subscription in accordance with Section 5.4 prior to the effective date.
 <br></br>28. Contact Information
 <br></br>For any questions, notices, or requests regarding these Terms, the Platform, or your data, please contact:
-<br></br>Company: [Company Legal Name]
+<br></br>Company: "Sustanica"
 <br></br>Registered Address: [Registered Office Address]
 <br></br>General Support: [Support Email]
 <br></br>Billing Queries: [Billing Support Email]

@@ -119,3 +119,14 @@
   gap: var(--space-3);
   margin-top: var(--space-6);
 }
+
+.demo-form__status {
+  margin-top: var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: #047857;
+}
+
+.demo-form__status--error {
+  color: #b91c1c;
+}
