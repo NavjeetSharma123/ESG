@@ -32,8 +32,7 @@ const Progress = ({ value, tone = 'green' }) => (
 );
 
 const ESG_INDICATORS = [
-  { label: 'Scope 1 emissions', unit: 'tCO2e', field: 'scope1Emissions', terms: ['scope 1', 'scope one'] },
-  { label: 'Scope 2 emissions', unit: 'tCO2e', field: 'scope2Emissions', terms: ['scope 2', 'scope two'] },
+  { label: 'Scope 1,2,3 emissions', unit: 'tCO2e', field: 'scope1Emissions', terms: ['scope 1', 'scope one'] },
   { label: 'Energy consumption', unit: 'MWh', field: 'energyConsumption', terms: ['energy consumption', 'total energy'] },
   { label: 'Water usage', unit: 'm3', field: 'waterUsage', terms: ['water usage', 'water consumption', 'water withdrawal'] },
   { label: 'Waste generated', unit: 't', field: 'wasteGenerated', terms: ['waste generated', 'total waste'] },
