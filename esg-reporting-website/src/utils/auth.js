@@ -73,13 +73,51 @@ export const login = async (usernameOrEmail, password) => {
   return currentSession;
 };
 
+export const checkCINExists = async (cinNumber) => {
+  const cin = String(cinNumber || '').trim().toUpperCase();
+  if (!cin) return false;
+  const { data, error } = await supabase
+    .from('register')
+    .select('id')
+    .ilike('cin_number', cin)
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return Boolean(data);
+};
+
 export const register = async (user) => {
   const email = String(user.email || '').trim().toLowerCase();
+  const cinNumber = String(user.cin_number || '').trim().toUpperCase();
+  if (await checkCINExists(cinNumber)) {
+    throw new Error('This CIN number is already registered.');
+  }
   const { confirmPassword, ...userForInsert } = user;
-  const { data, error } = await supabase.from('register').insert({ ...userForInsert, email }).select().single();
+  const { data, error } = await supabase.from('register').insert({ ...userForInsert, email, cin_number: cinNumber }).select().single();
   if (error) throw error;
   await createUserDocumentsFolder(data.cin_number || user.cin_number);
   return data;
+};
+
+export const changePassword = async (currentPassword, nextPassword) => {
+  const session = getAuthSession();
+  if (!session?.id && !session?.email) throw new Error('Please sign in again before changing your password.');
+
+  let query = supabase
+    .from('register')
+    .select('id, password_hash')
+    .limit(1);
+  query = session.id ? query.eq('id', session.id) : query.eq('email', session.email);
+  const { data: user, error } = await query.maybeSingle();
+  if (error) throw error;
+  if (!user || user.password_hash !== currentPassword) throw new Error('Current password is incorrect.');
+
+  const { error: updateError } = await supabase
+    .from('register')
+    .update({ password_hash: nextPassword, updated_at: new Date().toISOString() })
+    .eq('id', user.id);
+  if (updateError) throw updateError;
+  return true;
 };
 
 export const updateProfile = async (updates) => {

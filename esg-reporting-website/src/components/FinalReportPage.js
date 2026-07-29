@@ -31,6 +31,27 @@ const Progress = ({ value, tone = 'green' }) => (
   </div>
 );
 
+const ESG_INDICATORS = [
+  { label: 'Scope 1 emissions', unit: 'tCO2e', field: 'scope1Emissions', terms: ['scope 1', 'scope one'] },
+  { label: 'Scope 2 emissions', unit: 'tCO2e', field: 'scope2Emissions', terms: ['scope 2', 'scope two'] },
+  { label: 'Energy consumption', unit: 'MWh', field: 'energyConsumption', terms: ['energy consumption', 'total energy'] },
+  { label: 'Water usage', unit: 'm3', field: 'waterUsage', terms: ['water usage', 'water consumption', 'water withdrawal'] },
+  { label: 'Waste generated', unit: 't', field: 'wasteGenerated', terms: ['waste generated', 'total waste'] },
+  { label: 'Employee diversity', unit: '%', field: 'genderDiversityPercent', terms: ['gender diversity', 'women employees', 'female employees', 'diversity'] },
+  { label: 'Safety incidents', unit: '', field: 'safetyIncidents', terms: ['safety incidents', 'injury', 'lost time', 'ltifr'] },
+  { label: 'Board diversity', unit: '%', field: 'independentDirectorsPercent', terms: ['board diversity', 'independent directors', 'women directors'] },
+];
+
+const normalizeLookupText = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+const getQuestionLookupText = (question) => normalizeLookupText([
+  question.id,
+  question.question,
+  question.guidelines,
+  question.framework,
+  question.department,
+].filter(Boolean).join(' '));
+
 const FinalReportPage = () => {
   const location = useLocation();
   const history = useHistory();
@@ -103,13 +124,16 @@ const FinalReportPage = () => {
   const unansweredLabels = questions.filter((question) => !isAnswered(answerFor(question))).slice(0, 3).map((question) => question.question || question.id);
   const answeredLabels = questions.filter((question) => isAnswered(answerFor(question))).slice(0, 3).map((question) => question.question || question.id);
   const numericValue = (value) => Number(String(value ?? '').replace(/[^0-9.-]/g, '')) || 0;
-  const metrics = [
-    ['Scope 1 emissions', flatData.scope1Emissions, 'tCO₂e'], ['Scope 2 emissions', flatData.scope2Emissions, 'tCO₂e'],
-    ['Energy consumption', flatData.energyConsumption, 'MWh'], ['Water usage', flatData.waterUsage, 'm³'],
-    ['Waste generated', flatData.wasteGenerated, 't'], ['Employee diversity', flatData.genderDiversityPercent, '%'],
-    ['Safety incidents', flatData.safetyIncidents, ''], ['Board diversity', flatData.independentDirectorsPercent, '%'],
-  ];
-console.log("Flat Data:",flatData)
+  const metrics = ESG_INDICATORS.map((indicator) => {
+    const legacyValue = flatData[indicator.field];
+    if (isAnswered(legacyValue)) return [indicator.label, legacyValue, indicator.unit];
+
+    const dynamicQuestion = questions.find((question) => {
+      const lookup = getQuestionLookupText(question);
+      return indicator.terms.some((term) => lookup.includes(normalizeLookupText(term)));
+    });
+    return [indicator.label, dynamicQuestion ? answerFor(dynamicQuestion) : undefined, indicator.unit];
+  });
   const safeName = String(companyName).replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-');
   const handlePDF = async () => {
     try {
@@ -140,8 +164,8 @@ console.log("Flat Data:",flatData)
             socialScore,
             governanceScore,
             maturity,
-            scope1: numericValue(flatData.scope1Emissions),
-            scope2: numericValue(flatData.scope2Emissions),
+            scope1: numericValue(metrics[0]?.[1]),
+            scope2: numericValue(metrics[1]?.[1]),
             scope3: numericValue(flatData.scope3Emissions),
             topRisks: unansweredLabels,
             strengths: answeredLabels,

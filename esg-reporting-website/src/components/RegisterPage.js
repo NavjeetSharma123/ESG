@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, Redirect, useHistory } from 'react-router-dom';
-import { isAuthenticated, login, register } from '../utils/auth';
+import { checkCINExists, isAuthenticated, login, register } from '../utils/auth';
 import { COUNTRY_OPTIONS, INDUSTRY_SECTOR_OPTIONS } from '../data/esgOptions';
 import './LoginPage.css';
 
@@ -59,7 +59,8 @@ const RegisterPage = () => {
   if (isAuthenticated()) return <Redirect to="/profile" />;
 
   const change = (event) => {
-    setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
+    const value = event.target.name === 'cin_number' ? event.target.value.toUpperCase() : event.target.value;
+    setForm((current) => ({ ...current, [event.target.name]: value }));
     setError('');
   };
 
@@ -77,6 +78,10 @@ const RegisterPage = () => {
     if (!acceptedTerms) return setError('Please accept the Terms and Conditions to register.');
     setSending(true);
     try {
+      if (await checkCINExists(form.cin_number)) {
+        setError('This CIN number is already registered. Please sign in or use a different CIN.');
+        return;
+      }
       const timestamp = new Date().toISOString();
       const user = await register({
         ...form,

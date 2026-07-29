@@ -17,6 +17,7 @@
 .profile-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .85rem; }
 .profile-grid label, .profile-wide { display: grid; gap: .35rem; font-size: .82rem; font-weight: 650; }
 .profile-grid input, .profile-wide textarea, .profile-record input { width: 100%; box-sizing: border-box; padding: .62rem .7rem; border: 1px solid var(--color-border-strong); border-radius: 6px; font: inherit; }
+.profile-password-grid { margin-top: .75rem; }
 .profile-wide { margin: 1.2rem 0; }
 .profile-wide textarea { min-height: 100px; resize: vertical; }
 .profile-checks { display: flex; flex-wrap: wrap; gap: .8rem 1.25rem; padding: 1rem 0; }
@@ -34,4 +35,7 @@
 .profile-actions { display: flex; justify-content: flex-end; align-items: center; gap: 1rem; margin-top: 2rem; }
 .profile-actions span { font-size: .85rem; color: #166534; }
 .profile-actions button { border: 0; border-radius: 6px; background: var(--color-accent); color: #fff; padding: .75rem 1rem; font: inherit; font-weight: 700; cursor: pointer; }
+.profile-secondary-action { margin-top: 1rem; border: 1px solid var(--color-border-strong); border-radius: 6px; background: #fff; color: #0c3626; padding: .68rem .9rem; font: inherit; font-weight: 700; cursor: pointer; }
+.profile-success { margin: .85rem 0 0; color: #166534; font-size: .88rem; font-weight: 650; }
+.profile-error { margin: .85rem 0 0; color: #b91c1c; font-size: .88rem; font-weight: 650; }
 @media (max-width: 760px) { .profile-hero { align-items: flex-start; flex-direction: column; } .profile-layout { grid-template-columns: 1fr; } .profile-nav { grid-template-columns: repeat(2, 1fr); } .profile-grid, .profile-record { grid-template-columns: 1fr; } .profile-record button { width: max-content; } }
