@@ -92,7 +92,40 @@ export const generateInvestorESGReportPDF = ({ companyName, industry, reportingP
   const footer = () => { set('setDrawColor', LINE); doc.line(margin, height - 14, width - margin, height - 14); doc.setFont('helvetica', 'normal'); doc.setFontSize(8); set('setTextColor', MUTED); doc.text(name, margin, height - 8); doc.text(`Page ${page}`, width - margin, height - 8, { align: 'right' }); };
   const header = (title = headerLabel) => { headerLabel = title; set('setFillColor', GREEN_DARK); doc.rect(0, 0, width, 12, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(255, 255, 255); doc.text(clean(title).toUpperCase(), margin, 8); y = 24; };
   const addPage = (title = headerLabel) => { footer(); doc.addPage(); page += 1; header(title); };
-  const ensure = (needed) => { if (y + needed > height - 18) addPage(); };
+  const PAGE_BOTTOM = height - 20;
+  const FLOW_GAP = 4;
+  const CARD_RADIUS = 2.5;
+  const CARD_INSET_X = 6;
+  const CARD_TOP_PADDING = 7;
+  const CARD_BOTTOM_PADDING = 7;
+  const CARD_LABEL_GAP = 5;
+  const DISCLOSURE_ONLY_FOOTER_HEIGHT = 7;
+  const DISCLOSURE_FONT_SIZE = 9.1;
+  const DISCLOSURE_LINE_HEIGHT = 4.5;
+  const RESPONSE_FONT_SIZE = 8.4;
+  const RESPONSE_LINE_HEIGHT = 4.2;
+  const META_LINE_HEIGHT = 4;
+  const META_LABEL_ROWS = 2;
+  const CONTINUED_FOOTER_HEIGHT = 7;
+  const SECTION_HEADING_HEIGHT = 15;
+  const SECTION_HEADING_BOX_HEIGHT = 11;
+  const MIN_DISCLOSURE_CARD_HEIGHT = 34;
+  const METRIC_TABLE_PADDING_X = 7;
+  const METRIC_TABLE_INSET_X = 3;
+  const METRIC_TABLE_TOP_PADDING = 5;
+  const METRIC_TABLE_HEADER_HEIGHT = 7;
+  const METRIC_TABLE_BODY_OFFSET = 12;
+  const METRIC_TABLE_BOTTOM_PADDING = 4;
+  const METRIC_TABLE_GAP = 3;
+  const METRIC_TABLE_FONT_SIZE = 7.8;
+  const METRIC_NAME_WIDTH = 66;
+  const METRIC_VALUE_WIDTH = 51;
+  const META_TAG_X_OFFSET = 78;
+  const STATUS_BADGE_RIGHT_OFFSET = 43;
+  const CHART_TITLE_HEIGHT = 18;
+  const EMISSIONS_CHART_HEIGHT = 35;
+  const EMISSIONS_CHART_GAP = 6;
+  const ensure = (needed, title = headerLabel) => { if (y + needed > PAGE_BOTTOM) addPage(title); };
   const text = (value, opts = {}) => { const { x = margin, maxWidth = contentWidth, size = 9, line = 4.5, color = INK, font = 'normal', fallback = 'Not disclosed' } = opts; doc.setFont('helvetica', font); doc.setFontSize(size); set('setTextColor', color); const lines = doc.splitTextToSize(clean(value) || fallback, maxWidth); ensure(lines.length * line + 1); doc.text(lines, x, y); y += lines.length * line + 1; return lines.length; };
   const label = (value, x, yy, color = GREEN) => { doc.setFont('helvetica', 'bold'); doc.setFontSize(7.3); set('setTextColor', color); doc.text(clean(value).toUpperCase(), x, yy); };
   const title = (value, eyebrow) => { ensure(18); if (eyebrow) { label(eyebrow, margin, y); y += 5; } doc.setFont('helvetica', 'bold'); doc.setFontSize(18); set('setTextColor', GREEN_DARK); doc.text(clean(value), margin, y); y += 9; };
@@ -100,8 +133,44 @@ export const generateInvestorESGReportPDF = ({ companyName, industry, reportingP
   const chip = (value, color, x, yy) => { doc.setFont('helvetica', 'bold'); doc.setFontSize(6.8); const w = doc.getTextWidth(clean(value)) + 7; set('setFillColor', color); doc.roundedRect(x, yy - 4, w, 6, 2, 2, 'F'); doc.setTextColor(255, 255, 255); doc.text(clean(value), x + 3.5, yy); return w; };
   const card = (x, yy, w, heading, value, note, color = GREEN) => { set('setFillColor', SOFT); set('setDrawColor', LINE); doc.roundedRect(x, yy, w, 28, 3, 3, 'FD'); label(heading, x + 5, yy + 7, color); doc.setFont('helvetica', 'bold'); doc.setFontSize(15); set('setTextColor', GREEN_DARK); doc.text(clean(value), x + 5, yy + 16); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.3); set('setTextColor', MUTED); doc.text(doc.splitTextToSize(clean(note), w - 10), x + 5, yy + 23); };
   const responseFor = (q) => { const response = typeof answerFor === 'function' ? answerFor(q) : q.answer; return isAnswered(response) ? response : '[sample answer]'; };
-  const metricTable = (question, answer) => { const h = 21; ensure(h + 4); set('setFillColor', SOFT); set('setDrawColor', LINE); doc.roundedRect(margin + 7, y, contentWidth - 14, h, 1.5, 1.5, 'FD'); const cols = [margin + 10, margin + 81, margin + 120]; label('Metric name', cols[0], y + 5); label('Unit', cols[1], y + 5); label('Value', cols[2], y + 5); set('setDrawColor', LINE); doc.line(margin + 9, y + 7, width - margin - 9, y + 7); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.8); set('setTextColor', INK); doc.text(doc.splitTextToSize(clean(question.question), 66), cols[0], y + 12); doc.text(metricUnit(question), cols[1], y + 12); doc.text(doc.splitTextToSize(clean(answer), 51), cols[2], y + 12); y += h + 3; };
-  const emissionsChart = () => { ensure(48); title('Scope 1, 2 and 3 emissions trend', 'Performance visual'); const values = [visualData.scope1, visualData.scope2, visualData.scope3].map((v) => Math.max(0, Number(v) || 0)); const max = Math.max(...values, 1); const labels = ['Scope 1', 'Scope 2', 'Scope 3']; set('setFillColor', SOFT); set('setDrawColor', LINE); doc.roundedRect(margin, y, contentWidth, 35, 3, 3, 'FD'); values.forEach((value, index) => { const x = margin + 25 + index * 52; const barH = value ? Math.max(3, value / max * 18) : 2; set('setFillColor', [GREEN, BLUE, AMBER][index]); doc.rect(x, y + 26 - barH, 18, barH, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(7); set('setTextColor', INK); doc.text(labels[index], x + 9, y + 31, { align: 'center' }); doc.setFont('helvetica', 'normal'); doc.text(value ? `${value} tCO2e` : 'No value', x + 9, y + 10, { align: 'center' }); }); y += 41; text('Trend values show the current reporting-period values available in this report. Add prior-year data to enable a year-on-year comparison.', { size: 7.5, line: 3.8, color: MUTED }); };
+  const measureTextHeight = (value, maxWidth, size = RESPONSE_FONT_SIZE, lineHeight = RESPONSE_LINE_HEIGHT, font = 'normal', fallback = 'Not disclosed') => {
+    doc.setFont('helvetica', font);
+    doc.setFontSize(size);
+    const lines = doc.splitTextToSize(clean(value) || fallback, maxWidth);
+    return { lines, height: lines.length * lineHeight };
+  };
+  const calculateMetricTableHeight = (question, answer) => {
+    const name = measureTextHeight(question.question, METRIC_NAME_WIDTH, METRIC_TABLE_FONT_SIZE, RESPONSE_LINE_HEIGHT);
+    const value = measureTextHeight(answer, METRIC_VALUE_WIDTH, METRIC_TABLE_FONT_SIZE, RESPONSE_LINE_HEIGHT);
+    return METRIC_TABLE_BODY_OFFSET + Math.max(name.height, value.height, RESPONSE_LINE_HEIGHT) + METRIC_TABLE_BOTTOM_PADDING;
+  };
+  const metricTable = (question, answer) => {
+    const tableHeight = calculateMetricTableHeight(question, answer);
+    ensure(tableHeight + METRIC_TABLE_GAP);
+    set('setFillColor', SOFT); set('setDrawColor', LINE);
+    doc.roundedRect(margin + METRIC_TABLE_PADDING_X, y, contentWidth - METRIC_TABLE_PADDING_X * 2, tableHeight, 1.5, 1.5, 'FD');
+    const cols = [margin + 10, margin + 81, margin + 120];
+    label('Metric name', cols[0], y + METRIC_TABLE_TOP_PADDING);
+    label('Unit', cols[1], y + METRIC_TABLE_TOP_PADDING);
+    label('Value', cols[2], y + METRIC_TABLE_TOP_PADDING);
+    set('setDrawColor', LINE);
+    doc.line(margin + METRIC_TABLE_PADDING_X + METRIC_TABLE_INSET_X, y + METRIC_TABLE_HEADER_HEIGHT, width - margin - METRIC_TABLE_PADDING_X - METRIC_TABLE_INSET_X, y + METRIC_TABLE_HEADER_HEIGHT);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(METRIC_TABLE_FONT_SIZE); set('setTextColor', INK);
+    doc.text(measureTextHeight(question.question, METRIC_NAME_WIDTH, METRIC_TABLE_FONT_SIZE, RESPONSE_LINE_HEIGHT).lines, cols[0], y + METRIC_TABLE_BODY_OFFSET);
+    doc.text(metricUnit(question), cols[1], y + METRIC_TABLE_BODY_OFFSET);
+    doc.text(measureTextHeight(answer, METRIC_VALUE_WIDTH, METRIC_TABLE_FONT_SIZE, RESPONSE_LINE_HEIGHT).lines, cols[2], y + METRIC_TABLE_BODY_OFFSET);
+    y += tableHeight + METRIC_TABLE_GAP;
+  };
+  const emissionsChart = () => {
+    ensure(CHART_TITLE_HEIGHT + EMISSIONS_CHART_HEIGHT + EMISSIONS_CHART_GAP);
+    title('Scope 1, 2 and 3 emissions trend', 'Performance visual');
+    ensure(EMISSIONS_CHART_HEIGHT + EMISSIONS_CHART_GAP);
+    const values = [visualData.scope1, visualData.scope2, visualData.scope3].map((v) => Math.max(0, Number(v) || 0)); const max = Math.max(...values, 1); const labels = ['Scope 1', 'Scope 2', 'Scope 3'];
+    set('setFillColor', SOFT); set('setDrawColor', LINE); doc.roundedRect(margin, y, contentWidth, EMISSIONS_CHART_HEIGHT, 3, 3, 'FD');
+    values.forEach((value, index) => { const x = margin + 25 + index * 52; const barH = value ? Math.max(3, value / max * 18) : 2; set('setFillColor', [GREEN, BLUE, AMBER][index]); doc.rect(x, y + 26 - barH, 18, barH, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(7); set('setTextColor', INK); doc.text(labels[index], x + 9, y + 31, { align: 'center' }); doc.setFont('helvetica', 'normal'); doc.text(value ? `${value} tCO2e` : 'No value', x + 9, y + 10, { align: 'center' }); });
+    y += EMISSIONS_CHART_HEIGHT + EMISSIONS_CHART_GAP;
+    text('Trend values show the current reporting-period values available in this report. Add prior-year data to enable a year-on-year comparison.', { size: 7.5, line: 3.8, color: MUTED });
+  };
 
   // Cover
   set('setFillColor', GREEN_DARK); doc.rect(0, 0, width, height, 'F'); set('setFillColor', GREEN); doc.roundedRect(margin, 34, 4, 82, 2, 2, 'F'); doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.text('INVESTOR-GRADE ESG SUSTAINABILITY REPORT', margin + 11, 45); doc.setFontSize(28); doc.text(doc.splitTextToSize(name, 150), margin + 11, 64); doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(205, 225, 215); doc.text('Topic-led disclosures for investor review, assurance, and accountability', margin + 11, 101); doc.setFontSize(8.5); doc.text(`Reporting period: ${period}`, margin + 11, 114); doc.text(`Data collection window: ${collectionWindow}`, margin + 11, 121); footer();
@@ -119,15 +188,15 @@ export const generateInvestorESGReportPDF = ({ companyName, industry, reportingP
   addPage('Data quality and automation'); bookmark('Data quality and automation'); title('Data quality and automation', 'How to read this report'); const evidence = Number(visualData.evidenceCount || 0); const automated = Number(visualData.autoPopulated || 0) + Number(visualData.reused || 0); const total = Math.max(Number(visualData.totalQuestions) || count, 1); card(margin, y, (contentWidth - 5) / 2, 'Evidence', `${evidence}`, evidence ? 'Supporting records uploaded to the reporting workspace' : 'No supporting records uploaded; disclosures are unverified', evidence ? GREEN : RED); card(margin + (contentWidth + 5) / 2, y, (contentWidth - 5) / 2, 'Automation', `${Math.round(automated / total * 100)}`, `${automated} answers mapped or pre-populated from ${total} disclosures`, AMBER); y += 37; text('Evidence is the count of supporting documents uploaded to the reporting workspace; it is not an assurance conclusion and does not confirm the accuracy of a disclosure. Automation is the percentage of disclosure responses that were pre-populated or reused through framework mapping. It reduces data-entry effort, but every automated response still requires owner review and evidence validation.', { size: 9, line: 4.7 });
 
   const renderSectionHeading = (sectionName) => {
-    ensure(16);
+    ensure(SECTION_HEADING_HEIGHT + MIN_DISCLOSURE_CARD_HEIGHT);
     set('setFillColor', MINT);
     set('setDrawColor', LINE);
-    doc.roundedRect(margin, y - 2, contentWidth, 11, 2, 2, 'FD');
+    doc.roundedRect(margin, y - 2, contentWidth, SECTION_HEADING_BOX_HEIGHT, 2, 2, 'FD');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     set('setTextColor', GREEN_DARK);
     doc.text(clean(sectionName), margin + 5, y + 5);
-    y += 15;
+    y += SECTION_HEADING_HEIGHT;
   };
 
   const renderDisclosureCard = (question, groupTitle) => {
@@ -135,66 +204,111 @@ export const generateInvestorESGReportPDF = ({ companyName, industry, reportingP
     const [status, statusColor] = statusFor(question, answer);
     const frameworks = frameworksOf(question);
     const tags = frameworks.length ? frameworks.join(' | ') : 'No framework tag';
-    const disclosureLines = doc.splitTextToSize(clean(question.question), contentWidth - 22);
-    const responseLines = doc.splitTextToSize(clean(answer), contentWidth - 22);
-    const responseLineHeight = 4.2;
-    const disclosureLineHeight = 4.5;
-    const metaReserve = 14;
-    const bottomY = height - 20;
-    let remainingResponseLines = responseLines.length ? responseLines.slice() : ['Not disclosed'];
-    let isFirstCard = true;
-
-    while (isFirstCard || remainingResponseLines.length) {
-      if (y + 38 > bottomY) addPage(groupTitle);
-
-      const disclosureBlockHeight = isFirstCard ? disclosureLines.length * disclosureLineHeight + 16 : 10;
-      const availableHeight = Math.max(34, bottomY - y);
-      const maxLinesWithMeta = Math.max(1, Math.floor((availableHeight - disclosureBlockHeight - metaReserve - 8) / responseLineHeight));
-      const isLastCard = remainingResponseLines.length <= maxLinesWithMeta;
-      const maxLines = isLastCard
-        ? maxLinesWithMeta
-        : Math.max(1, Math.floor((availableHeight - disclosureBlockHeight - 8) / responseLineHeight));
-      const segmentLines = remainingResponseLines.splice(0, maxLines);
-      const cardHeight = Math.max(
-        40,
-        disclosureBlockHeight + segmentLines.length * responseLineHeight + (isLastCard ? metaReserve : 8)
-      );
-
+    const textWidth = contentWidth - CARD_INSET_X * 2 - 10;
+    const disclosure = measureTextHeight(question.question, textWidth, DISCLOSURE_FONT_SIZE, DISCLOSURE_LINE_HEIGHT, 'bold', 'Untitled disclosure');
+    const response = measureTextHeight(answer, textWidth, RESPONSE_FONT_SIZE, RESPONSE_LINE_HEIGHT);
+    const metaLines = [
+      `Evidence / source: ${question.evidence || question.source || (evidence ? 'Workspace evidence available - link source before publication' : 'No source attached')}`,
+      `Assurance status: ${question.assuranceStatus || (evidence ? 'Not assured' : 'Evidence pending')}`,
+      `Framework tags: ${tags}`,
+    ];
+    const calculateCardHeight = ({ isFirstSegment, disclosureLineCount, lineCount, includeMeta }) => {
+      const disclosureHeight = isFirstSegment ? CARD_LABEL_GAP + disclosureLineCount * DISCLOSURE_LINE_HEIGHT + CARD_LABEL_GAP : CARD_LABEL_GAP;
+      const responseHeight = CARD_LABEL_GAP + lineCount * RESPONSE_LINE_HEIGHT;
+      const metaHeight = includeMeta ? CARD_LABEL_GAP + META_LABEL_ROWS * META_LINE_HEIGHT : CONTINUED_FOOTER_HEIGHT;
+      return CARD_TOP_PADDING + disclosureHeight + responseHeight + metaHeight + CARD_BOTTOM_PADDING;
+    };
+    const calculateDisclosureOnlyHeight = (lineCount) => CARD_TOP_PADDING + CARD_LABEL_GAP + lineCount * DISCLOSURE_LINE_HEIGHT + DISCLOSURE_ONLY_FOOTER_HEIGHT + CARD_BOTTOM_PADDING;
+    const ensureSpace = (needed) => ensure(needed, groupTitle);
+    const drawCardBase = (cardHeight, badgeText) => {
       set('setFillColor', [255, 255, 255]);
       set('setDrawColor', LINE);
-      doc.roundedRect(margin, y, contentWidth, cardHeight, 2.5, 2.5, 'FD');
-      chip(isFirstCard ? status : `${status} continued`, statusColor, width - margin - 43, y + 7);
-
-      let cursorY = y + 7;
-      if (isFirstCard) {
-        label('Disclosure', margin + 6, cursorY);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9.1);
-        set('setTextColor', INK);
-        doc.text(disclosureLines, margin + 6, cursorY + 6);
-        cursorY += 9 + disclosureLines.length * disclosureLineHeight;
+      doc.roundedRect(margin, y, contentWidth, cardHeight, CARD_RADIUS, CARD_RADIUS, 'FD');
+      chip(badgeText, statusColor, width - margin - STATUS_BADGE_RIGHT_OFFSET, y + CARD_TOP_PADDING);
+    };
+    const drawCardContinuation = (segmentLines, cardHeight, isFinalSegment) => {
+      drawCardBase(cardHeight, `${status} continued`);
+      let cursorY = y + CARD_TOP_PADDING;
+      label('Company response continued', margin + CARD_INSET_X, cursorY);
+      cursorY += CARD_LABEL_GAP;
+      label('Response continued', margin + CARD_INSET_X, cursorY);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(RESPONSE_FONT_SIZE); set('setTextColor', INK);
+      doc.text(segmentLines, margin + CARD_INSET_X, cursorY + CARD_LABEL_GAP);
+      if (isFinalSegment) {
+        const metaY = y + cardHeight - CARD_BOTTOM_PADDING - META_LINE_HEIGHT;
+        label(metaLines[0], margin + CARD_INSET_X, metaY - META_LINE_HEIGHT, evidence ? GREEN : RED);
+        label(metaLines[1], margin + CARD_INSET_X, metaY);
+        label(metaLines[2], margin + META_TAG_X_OFFSET, metaY - META_LINE_HEIGHT);
       } else {
-        label('Company response continued', margin + 6, cursorY);
-        cursorY += 6;
+        label('Continued on next page', margin + CARD_INSET_X, y + cardHeight - CARD_BOTTOM_PADDING, MUTED);
       }
-
-      label(isFirstCard ? 'Company response' : 'Response continued', margin + 6, cursorY);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8.4);
-      set('setTextColor', INK);
-      doc.text(segmentLines, margin + 6, cursorY + 5);
-
-      if (isLastCard) {
-        const metaY = y + cardHeight - 9;
-        label(`Evidence / source: ${question.evidence || question.source || (evidence ? 'Workspace evidence available - link source before publication' : 'No source attached')}`, margin + 6, metaY, evidence ? GREEN : RED);
-        label(`Assurance status: ${question.assuranceStatus || (evidence ? 'Not assured' : 'Evidence pending')}`, margin + 6, metaY + 4);
-        label(`Framework tags: ${tags}`, margin + 78, metaY);
+      y += cardHeight + FLOW_GAP;
+    };
+    const drawDisclosureOverflowCard = (segmentLines, cardHeight) => {
+      drawCardBase(cardHeight, `${status} continued`);
+      const cursorY = y + CARD_TOP_PADDING;
+      label('Disclosure continued', margin + CARD_INSET_X, cursorY);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(DISCLOSURE_FONT_SIZE); set('setTextColor', INK);
+      doc.text(segmentLines, margin + CARD_INSET_X, cursorY + CARD_LABEL_GAP);
+      label('Continued on next page', margin + CARD_INSET_X, y + cardHeight - CARD_BOTTOM_PADDING, MUTED);
+      y += cardHeight + FLOW_GAP;
+    };
+    const drawDisclosureCard = (disclosureLines, segmentLines, cardHeight, isFinalSegment) => {
+      drawCardBase(cardHeight, status);
+      let cursorY = y + CARD_TOP_PADDING;
+      label('Disclosure', margin + CARD_INSET_X, cursorY);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(DISCLOSURE_FONT_SIZE); set('setTextColor', INK);
+      doc.text(disclosureLines, margin + CARD_INSET_X, cursorY + CARD_LABEL_GAP);
+      cursorY += CARD_LABEL_GAP + disclosureLines.length * DISCLOSURE_LINE_HEIGHT + CARD_LABEL_GAP;
+      label('Company response', margin + CARD_INSET_X, cursorY);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(RESPONSE_FONT_SIZE); set('setTextColor', INK);
+      doc.text(segmentLines, margin + CARD_INSET_X, cursorY + CARD_LABEL_GAP);
+      if (isFinalSegment) {
+        const metaY = y + cardHeight - CARD_BOTTOM_PADDING - META_LINE_HEIGHT;
+        label(metaLines[0], margin + CARD_INSET_X, metaY - META_LINE_HEIGHT, evidence ? GREEN : RED);
+        label(metaLines[1], margin + CARD_INSET_X, metaY);
+        label(metaLines[2], margin + META_TAG_X_OFFSET, metaY - META_LINE_HEIGHT);
       } else {
-        label('Continued on next page', margin + 6, y + cardHeight - 5, MUTED);
+        label('Continued on next page', margin + CARD_INSET_X, y + cardHeight - CARD_BOTTOM_PADDING, MUTED);
       }
+      y += cardHeight + FLOW_GAP;
+    };
 
-      y += cardHeight + 4;
-      isFirstCard = false;
+    let remainingResponseLines = response.lines.length ? response.lines.slice() : ['Not disclosed'];
+    let remainingDisclosureLines = disclosure.lines.length ? disclosure.lines.slice() : ['Untitled disclosure'];
+    let isFirstSegment = true;
+    while (remainingDisclosureLines.length) {
+      ensureSpace(MIN_DISCLOSURE_CARD_HEIGHT);
+      const minimumResponseCardHeight = calculateCardHeight({ isFirstSegment: true, disclosureLineCount: 1, lineCount: 1, includeMeta: false });
+      const availableDisclosureHeight = PAGE_BOTTOM - y - minimumResponseCardHeight;
+      const maxDisclosureLines = Math.floor(availableDisclosureHeight / DISCLOSURE_LINE_HEIGHT);
+      if (maxDisclosureLines >= remainingDisclosureLines.length) break;
+      const lineCount = Math.max(1, Math.floor((PAGE_BOTTOM - y - calculateDisclosureOnlyHeight(0)) / DISCLOSURE_LINE_HEIGHT));
+      const segmentLines = remainingDisclosureLines.splice(0, lineCount);
+      drawDisclosureOverflowCard(segmentLines, calculateDisclosureOnlyHeight(segmentLines.length));
+      addPage(groupTitle);
+    }
+    while (remainingResponseLines.length) {
+      ensureSpace(MIN_DISCLOSURE_CARD_HEIGHT);
+      const disclosureLineCount = isFirstSegment ? remainingDisclosureLines.length : 0;
+      const requiredForAll = calculateCardHeight({ isFirstSegment, disclosureLineCount, lineCount: remainingResponseLines.length, includeMeta: true });
+      if (requiredForAll <= PAGE_BOTTOM - y) {
+        const segmentLines = remainingResponseLines.splice(0);
+        isFirstSegment
+          ? drawDisclosureCard(remainingDisclosureLines, segmentLines, requiredForAll, true)
+          : drawCardContinuation(segmentLines, requiredForAll, true);
+      } else {
+        const fixedHeight = calculateCardHeight({ isFirstSegment, disclosureLineCount, lineCount: 0, includeMeta: false });
+        const availableLineHeight = Math.max(RESPONSE_LINE_HEIGHT, PAGE_BOTTOM - y - fixedHeight);
+        const lineCount = Math.max(1, Math.floor(availableLineHeight / RESPONSE_LINE_HEIGHT));
+        const segmentLines = remainingResponseLines.splice(0, lineCount);
+        const cardHeight = calculateCardHeight({ isFirstSegment, disclosureLineCount, lineCount: segmentLines.length, includeMeta: false });
+        isFirstSegment
+          ? drawDisclosureCard(remainingDisclosureLines, segmentLines, cardHeight, false)
+          : drawCardContinuation(segmentLines, cardHeight, false);
+        if (remainingResponseLines.length) addPage(groupTitle);
+      }
+      isFirstSegment = false;
     }
 
     if (isMetric(question, answer)) metricTable(question, answer);

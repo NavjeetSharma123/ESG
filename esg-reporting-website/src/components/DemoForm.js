@@ -52,9 +52,9 @@ const DemoForm = ({ onClose }) => {
     setSubmitStatus('');
     setSubmitError('');
 
-    const serviceId = process.env.REACT_APP_EMAILJS_SERVICE_ID;
-    const templateId = process.env.REACT_APP_EMAILJS_TEMPLATE_ID;
-    const publicKey = process.env.REACT_APP_EMAILJS_PUBLIC_KEY;
+    const serviceId = "service_pofp90h";
+    const templateId = "template_ihtrnwl";
+    const publicKey = "nSw5wd8uGop5jK6NI";
 
     if (!serviceId || !templateId || !publicKey) {
       setSubmitError('Email service is not configured. Please try again later.');

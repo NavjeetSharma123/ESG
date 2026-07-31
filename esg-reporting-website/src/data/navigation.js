@@ -15,5 +15,6 @@ export const footerNav = {
     // { label: 'Services', path: '/services' },
 //    { label: 'Client companies', path: '/companies' },
     { label: 'Request a demo', path: '/demo' },
+    { label: 'About Us', path: '/about' },
   ],
 };
