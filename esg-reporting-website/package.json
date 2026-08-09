@@ -19,7 +19,7 @@
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
-    "@emailjs/browser": "^3.11.0",
+    "@emailjs/browser": "3.11.0",
     "@supabase/supabase-js": "^2.39.7",
     "jspdf": "^2.5.1",
     "nodemailer": "^9.0.3",

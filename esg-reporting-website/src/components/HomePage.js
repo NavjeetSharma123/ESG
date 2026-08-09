@@ -19,11 +19,6 @@ async function fetchUsers() {
     .from('register') // Replace with your actual table name
     .select('*')
 
-  if (error) {
-    console.error('Error fetching data:', error)
-  } else {
-    console.log('Database connected successfully! Data:', data)
-  }
 }
 
 fetchUsers()

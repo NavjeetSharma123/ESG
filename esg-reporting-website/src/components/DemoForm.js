@@ -5,6 +5,14 @@ import Button from './ui/Button';
 import Container from './ui/Container';
 import './DemoForm.css';
 
+const emailjsConfig = {
+  serviceId: "service_pofp90h",
+  templateId: "template_ihtrnwl",
+  publicKey: "YzPptBip6aap04ZgV",
+};
+
+emailjs.init(emailjsConfig.publicKey);
+
 const initialFormData = {
   // Contact
   firstName: '',
@@ -52,9 +60,7 @@ const DemoForm = ({ onClose }) => {
     setSubmitStatus('');
     setSubmitError('');
 
-    const serviceId = "service_pofp90h";
-    const templateId = "template_ihtrnwl";
-    const publicKey = "nSw5wd8uGop5jK6NI";
+    const { serviceId, templateId, publicKey } = emailjsConfig;
 
     if (!serviceId || !templateId || !publicKey) {
       setSubmitError('Email service is not configured. Please try again later.');
@@ -70,9 +76,7 @@ const DemoForm = ({ onClose }) => {
     setIsSubmitting(true);
 
     try {
-      await emailjs.send(serviceId, templateId, templateParams, {
-        publicKey,
-      });
+      await emailjs.send(serviceId, templateId, templateParams);
       setSubmitStatus('Thanks. Your demo request has been sent.');
       setFormData(initialFormData);
       if (onClose) onClose();
