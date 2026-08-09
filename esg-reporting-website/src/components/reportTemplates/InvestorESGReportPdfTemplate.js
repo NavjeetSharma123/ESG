@@ -81,7 +81,7 @@ const periodWindow = (reportingPeriod, supplied) => {
   return year ? `1 January ${year} to 31 December ${year} (derived from reporting period)` : 'Not provided; confirm before external publication';
 };
 
-export const generateInvestorESGReportPDF = ({ companyName, industry, reportingPeriod, dataCollectionWindow, readiness, groups = [], answerFor, visualData = {}, executive = {}, assurance = {} }) => {
+export const generateInvestorESGReportPDF = ({ companyName, industry, reportingPeriod, dataCollectionWindow, readiness, groups = [], answerFor, visualData = {}, executive = {}, assurance = {}, customBlocks = [] }) => {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const width = doc.internal.pageSize.getWidth(); const height = doc.internal.pageSize.getHeight();
   const margin = 16; const contentWidth = width - margin * 2; const name = clean(companyName) || 'ESG Sustainability Report';
@@ -170,6 +170,34 @@ export const generateInvestorESGReportPDF = ({ companyName, industry, reportingP
     values.forEach((value, index) => { const x = margin + 25 + index * 52; const barH = value ? Math.max(3, value / max * 18) : 2; set('setFillColor', [GREEN, BLUE, AMBER][index]); doc.rect(x, y + 26 - barH, 18, barH, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(7); set('setTextColor', INK); doc.text(labels[index], x + 9, y + 31, { align: 'center' }); doc.setFont('helvetica', 'normal'); doc.text(value ? `${value} tCO2e` : 'No value', x + 9, y + 10, { align: 'center' }); });
     y += EMISSIONS_CHART_HEIGHT + EMISSIONS_CHART_GAP;
     text('Trend values show the current reporting-period values available in this report. Add prior-year data to enable a year-on-year comparison.', { size: 7.5, line: 3.8, color: MUTED });
+  };
+  const renderCustomBlocks = (blocks = []) => {
+    const visibleBlocks = blocks.filter((block) => clean(block?.title || block?.body || block?.image));
+    if (!visibleBlocks.length) return;
+    addPage('Management additions');
+    bookmark('Management additions');
+    title('Management additions', 'Final review content');
+    visibleBlocks.forEach((block, index) => {
+      ensure(22);
+      const blockTitle = clean(block.title) || `Additional note ${index + 1}`;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      set('setTextColor', GREEN_DARK);
+      doc.text(blockTitle, margin, y);
+      y += 6;
+      if (clean(block.body)) text(block.body, { size: 8.8, line: 4.5, color: INK });
+      if (block.image) {
+        const imageHeight = 70;
+        ensure(imageHeight + FLOW_GAP);
+        try {
+          doc.addImage(block.image, block.imageType || 'JPEG', margin, y, contentWidth, imageHeight, undefined, 'FAST');
+          y += imageHeight + FLOW_GAP;
+        } catch (error) {
+          text('Attached image could not be embedded in the PDF export.', { size: 8, line: 4, color: RED, font: 'bold' });
+        }
+      }
+      y += FLOW_GAP;
+    });
   };
 
   // Cover
@@ -324,6 +352,8 @@ export const generateInvestorESGReportPDF = ({ companyName, industry, reportingP
       section.questions.forEach((question) => renderDisclosureCard(question, group.framework));
     });
   });
+
+  renderCustomBlocks(customBlocks);
 
   addPage('Assurance statement'); bookmark('Assurance statement'); title('Assurance statement', 'External assurance'); text(`Assurance provider: ${clean(assurance.provider) || 'Not appointed'}\nScope: ${clean(assurance.scope) || 'No assurance scope has been defined'}\nStandard used: ${clean(assurance.standard) || 'Not specified'}\nLevel of assurance: ${clean(assurance.level) || 'Not assured'}\nLimitations: ${clean(assurance.limitations) || 'This report is a management-prepared draft. Evidence availability, completeness and the accuracy of disclosures have not been independently assured.'}`, { size: 9.5, line: 5.4 }); y += 7; text('No statement in this report should be read as an independent assurance opinion unless a named assurance provider, scope, standard and level of assurance are completed above.', { size: 8.5, line: 4.3, color: RED, font: 'bold' });
 

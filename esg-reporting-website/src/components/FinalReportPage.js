@@ -16,6 +16,7 @@ const FRAMEWORK_FIELDS = {
 
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
 const valueOrDash = (value, suffix = '') => (isAnswered(value) ? `${value}${suffix}` : '—');
+const answerKey = (id) => String(id ?? '').trim();
 const downloadBlob = (content, type, filename) => {
   const url = URL.createObjectURL(new Blob([content], { type }));
   const link = document.createElement('a');
@@ -24,6 +25,12 @@ const downloadBlob = (content, type, filename) => {
   link.click();
   URL.revokeObjectURL(url);
 };
+const readFileAsDataURL = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = reject;
+  reader.readAsDataURL(file);
+});
 
 const Progress = ({ value, tone = 'green' }) => (
   <div className="fr-progress" aria-label={`${value}% complete`}>
@@ -56,17 +63,22 @@ const FinalReportPage = () => {
   const history = useHistory();
   const [darkMode, setDarkMode] = useState(false);
   const [openFramework, setOpenFramework] = useState(null);
+  const [editorOpen, setEditorOpen] = useState(false);
   const persistedDraft = loadESGDraft() || {};
   const state = { ...persistedDraft, ...(location.state || {}) };
   const { source, brsrData, esgData, griData, visibleQuestions } = state;
-  const reportAnswers = state.reportAnswers || state.questionAnswers || state.answers || {};
   const activeData = brsrData || esgData || griData;
   const questions = Array.isArray(visibleQuestions) ? visibleQuestions : [];
 
-  const flatData = useMemo(() => {
+  const initialFlatData = useMemo(() => {
     if (!griData) return activeData || {};
     return Object.assign({}, griData.baseFormData, griData.griUniversal, griData.griEconomic, griData.griEnvironmental, griData.griSocial);
   }, [activeData, griData]);
+  const [editedData, setEditedData] = useState(initialFlatData);
+  const [editedAnswers, setEditedAnswers] = useState(state.reportAnswers || state.questionAnswers || state.answers || {});
+  const [customBlocks, setCustomBlocks] = useState(state.customBlocks || []);
+  const flatData = editedData || {};
+  const reportAnswers = editedAnswers || {};
 
   if (!source || !activeData) {
     return <main className="final-report-page"><div className="fr-empty"><span>◎</span><h1>No report data found</h1><p>Complete a reporting flow first, then return here for your readiness review.</p><button className="fr-btn primary" onClick={() => history.push('/')}>Go to dashboard</button></div></main>;
@@ -87,7 +99,7 @@ const FinalReportPage = () => {
   const disclosureGroups = buildDisclosureHierarchy(questions, selectedFrameworks);
   const industry = flatData.industry || flatData.sector || 'Industry not specified';
   const reportingPeriod = flatData.reportingPeriod || flatData.financialYear || 'Current reporting period';
-  const dataCollectionWindow = state.dataCollectionWindow || flatData.dataCollectionWindow || flatData.reportingDataCollectionWindow;
+  const dataCollectionWindow = flatData.dataCollectionWindow || state.dataCollectionWindow || flatData.reportingDataCollectionWindow;
   const updatedBy = state.lastUpdatedBy || 'ESG Reporting Team';
   const evidenceCount = Number(state.supportingDocumentsCount || flatData.supportingDocumentsCount || 0);
   const commentsCount = Number(state.reviewCommentsCount || 0);
@@ -133,11 +145,30 @@ const FinalReportPage = () => {
     });
     return [indicator.label, dynamicQuestion ? answerFor(dynamicQuestion) : undefined, indicator.unit];
   });
+  const editableQuestions = questions;
+  const updateDataField = (field, value) => setEditedData((previous) => ({ ...(previous || {}), [field]: value }));
+  const updateAnswerField = (questionId, value) => setEditedAnswers((previous) => ({ ...(previous || {}), [answerKey(questionId)]: value }));
+  const updateCustomBlock = (index, updates) => setCustomBlocks((previous) => previous.map((block, blockIndex) => blockIndex === index ? { ...block, ...updates } : block));
+  const removeCustomBlock = (index) => setCustomBlocks((previous) => previous.filter((_, blockIndex) => blockIndex !== index));
+  const addTextBlock = () => setCustomBlocks((previous) => [...previous, { type: 'text', title: 'Management note', body: '' }]);
+  const addImageBlock = async (event) => {
+    const file = event.target.files && event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+    try {
+      const image = await readFileAsDataURL(file);
+      const imageType = file.type && file.type.includes('png') ? 'PNG' : 'JPEG';
+      setCustomBlocks((previous) => [...previous, { type: 'image', title: file.name.replace(/\.[^.]+$/, ''), body: '', image, imageType }]);
+    } catch (error) {
+      console.error(error);
+      alert('The image could not be added. Please try another file.');
+    }
+  };
   const safeName = String(companyName).replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-');
   const handlePDF = async () => {
     try {
       if (source === 'BRSR') {
-        const blob = await generateBRSRReportPDFFromTemplate(brsrData);
+        const blob = await generateBRSRReportPDFFromTemplate(flatData);
         downloadBlob(blob, 'application/pdf', `${safeName}-BRSR-Report.pdf`);
       } else if (source === 'ESG' && questions.length) {
         const doc = generateInvestorESGReportPDF({
@@ -172,16 +203,17 @@ const FinalReportPage = () => {
             materialityApproach: state.materialityApproach || flatData.materialityApproach,
           },
           executive: {
-            signatoryName: state.ceoName || state.csoName || flatData.ceoName || flatData.csoName,
-            signatoryTitle: state.ceoName || flatData.ceoName ? 'Chief Executive Officer' : state.csoName || flatData.csoName ? 'Chief Sustainability Officer' : undefined,
+            signatoryName: flatData.ceoName || flatData.csoName || state.ceoName || state.csoName,
+            signatoryTitle: flatData.ceoName || state.ceoName ? 'Chief Executive Officer' : flatData.csoName || state.csoName ? 'Chief Sustainability Officer' : undefined,
           },
           assurance: {
-            provider: state.assuranceProvider || flatData.assuranceProvider,
-            scope: state.assuranceScope || flatData.assuranceScope,
-            standard: state.assuranceStandard || flatData.assuranceStandard,
-            level: state.assuranceLevel || flatData.assuranceLevel,
-            limitations: state.assuranceLimitations || flatData.assuranceLimitations,
+            provider: flatData.assuranceProvider || state.assuranceProvider,
+            scope: flatData.assuranceScope || state.assuranceScope,
+            standard: flatData.assuranceStandard || state.assuranceStandard,
+            level: flatData.assuranceLevel || state.assuranceLevel,
+            limitations: flatData.assuranceLimitations || state.assuranceLimitations,
           },
+          customBlocks,
         });
         doc.save(`${safeName}-ESG-Report.pdf`);
       } else {
@@ -195,7 +227,7 @@ const FinalReportPage = () => {
     <main className={`final-report-page ${darkMode ? 'dark' : ''}`}>
       <header className="fr-topbar">
         <div><button className="fr-back" onClick={() => history.goBack()} aria-label="Go back">←</button><span className="fr-eyebrow">FINAL REPORT / {reportingPeriod}</span></div>
-        <div className="fr-top-actions"><button className="fr-btn primary" onClick={handlePDF}>Download PDF</button></div>
+        <div className="fr-top-actions"><button className="fr-btn" onClick={() => setEditorOpen(true)}>Edit before finalising</button><button className="fr-btn primary" onClick={handlePDF}>Download PDF</button></div>
       </header>
 
       <section className="fr-hero">
@@ -225,13 +257,52 @@ const FinalReportPage = () => {
 
           <section className="fr-section"><span className="fr-kicker">MATERIALITY</span><h2>Material topics summary</h2><div className="fr-topic-grid">{materialTopics.map((topic, index) => <div key={topic}><span>0{index + 1}</span><strong>{topic}</strong><small>{selectedFrameworks.slice(0, 3).join(' · ')}</small><b>SDG {index === 0 ? '13' : index === 1 ? '8' : '16'}</b></div>)}</div></section>
 
+          {!!customBlocks.length && <section className="fr-section"><span className="fr-kicker">FINAL REVIEW CONTENT</span><h2>Management additions</h2><div className="fr-custom-blocks">{customBlocks.map((block, index) => <article key={`${block.title}-${index}`} className="fr-custom-block"><strong>{block.title || `Additional item ${index + 1}`}</strong>{block.body && <p>{block.body}</p>}{block.image && <img src={block.image} alt={block.title || 'Report addition'} />}</article>)}</div></section>}
+
           <section className="fr-section" hidden><span className="fr-kicker">AUDIT TRAIL</span><h2>Recent activity</h2><div className="fr-timeline">{[['Report data consolidated', 'Today', 'System'], ['Framework mapping refreshed', 'Today', 'Auto-mapping engine'], ['Readiness assessment generated', 'Today', updatedBy], ['Draft report created', reportingPeriod, updatedBy]].map(([event, time, actor]) => <div key={event}><i /><span><strong>{event}</strong><small>{actor}</small></span><time>{time}</time></div>)}</div></section>
         </div>
 
         <aside className="fr-sidebar"><div className="fr-side-card readiness"><span>SUBMISSION READINESS</span><div className="fr-side-score">{readiness}<small>/100</small></div>{[['Data completion', completion], ['Evidence availability', clamp(evidenceCount * 12)], ['Framework coverage', coverage], ['Data quality', clamp(100 - pending * 3)], ['Review status', commentsCount ? 65 : 100]].map(([label, score]) => <div className="fr-side-progress" key={label}><span>{label}<b>{score}%</b></span><Progress value={score} /></div>)}<p>{readiness >= 85 ? 'Ready for final approval and submission.' : `${100-readiness} points to submission-ready.`}</p></div><nav className="fr-side-card" hidden><span>REPORT SECTIONS</span>{['Frameworks', 'Coverage', 'Benchmark', 'Gap analysis', 'Performance', 'Insights', 'Audit trail'].map((item, index) => <a href={`#${index === 0 ? 'frameworks' : ''}`} key={item}><i>{index + 1}</i>{item}</a>)}</nav><div className="fr-side-card forecast" hidden><span>READINESS FORECAST</span><strong>{pending ? `${Math.max(1, Math.ceil(pending / 8))} days` : 'Ready now'}</strong><p>At your current completion pace.</p></div></aside>
       </div>
 
-      <section className="fr-export"><div><span className="fr-kicker">YOUR REPORT IS ALMOST THERE</span><h2 style={{color: "white"}}>Export and share</h2><p>Generate board-ready outputs or hand off structured data for assurance.</p></div><div className="fr-export-actions"><button className="fr-btn primary" onClick={handlePDF}>Download PDF report</button></div></section>
+      <section className="fr-export"><div><span className="fr-kicker">YOUR REPORT IS ALMOST THERE</span><h2 style={{color: "white"}}>Export and share</h2><p>Generate board-ready outputs or hand off structured data for assurance.</p></div><div className="fr-export-actions"><button className="fr-btn" onClick={() => setEditorOpen(true)}>Edit report</button><button className="fr-btn primary" onClick={handlePDF}>Download PDF report</button></div></section>
+
+      {editorOpen && (
+        <div className="fr-editor-backdrop" role="presentation">
+          <section className="fr-editor-modal" role="dialog" aria-modal="true" aria-labelledby="report-editor-title">
+            <header className="fr-editor-header">
+              <div><span className="fr-kicker">PRE-FINAL REVIEW</span><h2 id="report-editor-title">Edit report data</h2></div>
+              <button className="fr-editor-close" onClick={() => setEditorOpen(false)} aria-label="Close editor">x</button>
+            </header>
+
+            <div className="fr-editor-grid">
+              <label>Company name<input value={flatData.companyName || ''} onChange={(event) => updateDataField('companyName', event.target.value)} /></label>
+              <label>Industry<input value={flatData.industry || flatData.sector || ''} onChange={(event) => updateDataField('industry', event.target.value)} /></label>
+              <label>Reporting period<input value={flatData.reportingPeriod || flatData.financialYear || ''} onChange={(event) => updateDataField('reportingPeriod', event.target.value)} /></label>
+              <label>Data collection window<input value={flatData.dataCollectionWindow || ''} onChange={(event) => updateDataField('dataCollectionWindow', event.target.value)} /></label>
+              <label>Assurance provider<input value={flatData.assuranceProvider || ''} onChange={(event) => updateDataField('assuranceProvider', event.target.value)} /></label>
+              <label>Assurance level<input value={flatData.assuranceLevel || ''} onChange={(event) => updateDataField('assuranceLevel', event.target.value)} /></label>
+            </div>
+
+            <div className="fr-editor-section">
+              <div className="fr-editor-section-head"><h3>ESG indicators</h3><span>Edit values used in the report and charts</span></div>
+              <div className="fr-editor-grid">
+                {ESG_INDICATORS.map((indicator) => <label key={indicator.field}>{indicator.label}<input value={flatData[indicator.field] || ''} onChange={(event) => updateDataField(indicator.field, event.target.value)} /></label>)}
+              </div>
+            </div>
+
+            {!!editableQuestions.length && <div className="fr-editor-section"><div className="fr-editor-section-head"><h3>Disclosure answers</h3><span>{editableQuestions.length} visible questions shown</span></div><div className="fr-answer-editor-list">{editableQuestions.map((question) => <label key={question.id}><span>{question.question || question.id}</span><textarea value={answerFor(question) || ''} onChange={(event) => updateAnswerField(question.id, event.target.value)} rows={3} /></label>)}</div></div>}
+
+            <div className="fr-editor-section">
+              <div className="fr-editor-section-head"><h3>Text and image additions</h3><span>Included in preview and ESG PDF</span></div>
+              <div className="fr-editor-actions"><button className="fr-btn" onClick={addTextBlock}>Add text</button><label className="fr-btn fr-file-btn">Add image<input type="file" accept="image/png,image/jpeg" onChange={addImageBlock} /></label></div>
+              <div className="fr-custom-editor-list">{customBlocks.map((block, index) => <article key={index}><input value={block.title || ''} placeholder="Section title" onChange={(event) => updateCustomBlock(index, { title: event.target.value })} /><textarea value={block.body || ''} placeholder="Optional supporting text" onChange={(event) => updateCustomBlock(index, { body: event.target.value })} rows={3} />{block.image && <img src={block.image} alt={block.title || 'Custom addition'} />}<button className="fr-text-btn" onClick={() => removeCustomBlock(index)}>Remove</button></article>)}</div>
+            </div>
+
+            <footer className="fr-editor-footer"><button className="fr-btn" onClick={() => setEditorOpen(false)}>Review changes</button><button className="fr-btn primary" onClick={() => { setEditorOpen(false); handlePDF(); }}>Finalise and download PDF</button></footer>
+          </section>
+        </div>
+      )}
     </main>
   );
 };
