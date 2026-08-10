@@ -174,9 +174,6 @@ export const generateInvestorESGReportPDF = ({ companyName, industry, reportingP
   const renderCustomBlocks = (blocks = []) => {
     const visibleBlocks = blocks.filter((block) => clean(block?.title || block?.body || block?.image));
     if (!visibleBlocks.length) return;
-    addPage('Management additions');
-    bookmark('Management additions');
-    title('Management additions', 'Final review content');
     visibleBlocks.forEach((block, index) => {
       ensure(22);
       const blockTitle = clean(block.title) || `Additional note ${index + 1}`;
@@ -199,6 +196,7 @@ export const generateInvestorESGReportPDF = ({ companyName, industry, reportingP
       y += FLOW_GAP;
     });
   };
+  const blocksForPlacement = (placement) => customBlocks.filter((block) => (block.placement || 'append') === placement);
 
   // Cover
   set('setFillColor', GREEN_DARK); doc.rect(0, 0, width, height, 'F'); set('setFillColor', GREEN); doc.roundedRect(margin, 34, 4, 82, 2, 2, 'F'); doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.text('INVESTOR-GRADE ESG SUSTAINABILITY REPORT', margin + 11, 45); doc.setFontSize(28); doc.text(doc.splitTextToSize(name, 150), margin + 11, 64); doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(205, 225, 215); doc.text('Topic-led disclosures for investor review, assurance, and accountability', margin + 11, 101); doc.setFontSize(8.5); doc.text(`Reporting period: ${period}`, margin + 11, 114); doc.text(`Data collection window: ${collectionWindow}`, margin + 11, 121); footer();
@@ -348,12 +346,22 @@ export const generateInvestorESGReportPDF = ({ companyName, industry, reportingP
     bookmark(group.framework);
     title(group.framework, 'Topic-led disclosures');
     group.subsections.forEach((section) => {
+      renderCustomBlocks(blocksForPlacement(`section:${group.framework}::${section.name}`));
       renderSectionHeading(section.name);
-      section.questions.forEach((question) => renderDisclosureCard(question, group.framework));
+      section.questions.forEach((question) => {
+        renderCustomBlocks(blocksForPlacement(`question:${question.id}`));
+        renderDisclosureCard(question, group.framework);
+      });
     });
   });
 
-  renderCustomBlocks(customBlocks);
+  const appendBlocks = blocksForPlacement('append');
+  if (appendBlocks.length) {
+    addPage('Management additions');
+    bookmark('Management additions');
+    title('Management additions', 'Final review content');
+    renderCustomBlocks(appendBlocks);
+  }
 
   addPage('Assurance statement'); bookmark('Assurance statement'); title('Assurance statement', 'External assurance'); text(`Assurance provider: ${clean(assurance.provider) || 'Not appointed'}\nScope: ${clean(assurance.scope) || 'No assurance scope has been defined'}\nStandard used: ${clean(assurance.standard) || 'Not specified'}\nLevel of assurance: ${clean(assurance.level) || 'Not assured'}\nLimitations: ${clean(assurance.limitations) || 'This report is a management-prepared draft. Evidence availability, completeness and the accuracy of disclosures have not been independently assured.'}`, { size: 9.5, line: 5.4 }); y += 7; text('No statement in this report should be read as an independent assurance opinion unless a named assurance provider, scope, standard and level of assurance are completed above.', { size: 8.5, line: 4.3, color: RED, font: 'bold' });
 

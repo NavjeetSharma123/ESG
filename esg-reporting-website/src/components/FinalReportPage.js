@@ -57,6 +57,10 @@ const getQuestionLookupText = (question) => normalizeLookupText([
   question.framework,
   question.department,
 ].filter(Boolean).join(' '));
+const truncateLabel = (value, length = 92) => {
+  const text = String(value || '').trim();
+  return text.length > length ? `${text.slice(0, length - 3)}...` : text;
+};
 
 const FinalReportPage = () => {
   const location = useLocation();
@@ -146,11 +150,24 @@ const FinalReportPage = () => {
     return [indicator.label, dynamicQuestion ? answerFor(dynamicQuestion) : undefined, indicator.unit];
   });
   const editableQuestions = questions;
+  const placementOptions = useMemo(() => {
+    const options = [{ value: 'append', label: 'End of report' }];
+    disclosureGroups.forEach((group) => {
+      group.subsections.forEach((section) => {
+        options.push({ value: `section:${group.framework}::${section.name}`, label: `Before section: ${section.name}` });
+        section.questions.forEach((question) => {
+          options.push({ value: `question:${question.id}`, label: `Before question: ${truncateLabel(question.question || question.id)}` });
+        });
+      });
+    });
+    return options;
+  }, [disclosureGroups]);
+  const placementLabel = (placement) => placementOptions.find((option) => option.value === (placement || 'append'))?.label || 'End of report';
   const updateDataField = (field, value) => setEditedData((previous) => ({ ...(previous || {}), [field]: value }));
   const updateAnswerField = (questionId, value) => setEditedAnswers((previous) => ({ ...(previous || {}), [answerKey(questionId)]: value }));
   const updateCustomBlock = (index, updates) => setCustomBlocks((previous) => previous.map((block, blockIndex) => blockIndex === index ? { ...block, ...updates } : block));
   const removeCustomBlock = (index) => setCustomBlocks((previous) => previous.filter((_, blockIndex) => blockIndex !== index));
-  const addTextBlock = () => setCustomBlocks((previous) => [...previous, { type: 'text', title: 'Management note', body: '' }]);
+  const addTextBlock = () => setCustomBlocks((previous) => [...previous, { type: 'text', title: 'Management note', body: '', placement: 'append' }]);
   const addImageBlock = async (event) => {
     const file = event.target.files && event.target.files[0];
     event.target.value = '';
@@ -158,7 +175,7 @@ const FinalReportPage = () => {
     try {
       const image = await readFileAsDataURL(file);
       const imageType = file.type && file.type.includes('png') ? 'PNG' : 'JPEG';
-      setCustomBlocks((previous) => [...previous, { type: 'image', title: file.name.replace(/\.[^.]+$/, ''), body: '', image, imageType }]);
+      setCustomBlocks((previous) => [...previous, { type: 'image', title: file.name.replace(/\.[^.]+$/, ''), body: '', image, imageType, placement: 'append' }]);
     } catch (error) {
       console.error(error);
       alert('The image could not be added. Please try another file.');
@@ -257,7 +274,7 @@ const FinalReportPage = () => {
 
           <section className="fr-section"><span className="fr-kicker">MATERIALITY</span><h2>Material topics summary</h2><div className="fr-topic-grid">{materialTopics.map((topic, index) => <div key={topic}><span>0{index + 1}</span><strong>{topic}</strong><small>{selectedFrameworks.slice(0, 3).join(' · ')}</small><b>SDG {index === 0 ? '13' : index === 1 ? '8' : '16'}</b></div>)}</div></section>
 
-          {!!customBlocks.length && <section className="fr-section"><span className="fr-kicker">FINAL REVIEW CONTENT</span><h2>Management additions</h2><div className="fr-custom-blocks">{customBlocks.map((block, index) => <article key={`${block.title}-${index}`} className="fr-custom-block"><strong>{block.title || `Additional item ${index + 1}`}</strong>{block.body && <p>{block.body}</p>}{block.image && <img src={block.image} alt={block.title || 'Report addition'} />}</article>)}</div></section>}
+          {!!customBlocks.length && <section className="fr-section"><span className="fr-kicker">FINAL REVIEW CONTENT</span><h2>Management additions</h2><div className="fr-custom-blocks">{customBlocks.map((block, index) => <article key={`${block.title}-${index}`} className="fr-custom-block"><span>{placementLabel(block.placement)}</span><strong>{block.title || `Additional item ${index + 1}`}</strong>{block.body && <p>{block.body}</p>}{block.image && <img src={block.image} alt={block.title || 'Report addition'} />}</article>)}</div></section>}
 
           <section className="fr-section" hidden><span className="fr-kicker">AUDIT TRAIL</span><h2>Recent activity</h2><div className="fr-timeline">{[['Report data consolidated', 'Today', 'System'], ['Framework mapping refreshed', 'Today', 'Auto-mapping engine'], ['Readiness assessment generated', 'Today', updatedBy], ['Draft report created', reportingPeriod, updatedBy]].map(([event, time, actor]) => <div key={event}><i /><span><strong>{event}</strong><small>{actor}</small></span><time>{time}</time></div>)}</div></section>
         </div>
@@ -296,7 +313,7 @@ const FinalReportPage = () => {
             <div className="fr-editor-section">
               <div className="fr-editor-section-head"><h3>Text and image additions</h3><span>Included in preview and ESG PDF</span></div>
               <div className="fr-editor-actions"><button className="fr-btn" onClick={addTextBlock}>Add text</button><label className="fr-btn fr-file-btn">Add image<input type="file" accept="image/png,image/jpeg" onChange={addImageBlock} /></label></div>
-              <div className="fr-custom-editor-list">{customBlocks.map((block, index) => <article key={index}><input value={block.title || ''} placeholder="Section title" onChange={(event) => updateCustomBlock(index, { title: event.target.value })} /><textarea value={block.body || ''} placeholder="Optional supporting text" onChange={(event) => updateCustomBlock(index, { body: event.target.value })} rows={3} />{block.image && <img src={block.image} alt={block.title || 'Custom addition'} />}<button className="fr-text-btn" onClick={() => removeCustomBlock(index)}>Remove</button></article>)}</div>
+              <div className="fr-custom-editor-list">{customBlocks.map((block, index) => <article key={index}><label>Place this content<select value={block.placement || 'append'} onChange={(event) => updateCustomBlock(index, { placement: event.target.value })}>{placementOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label><input value={block.title || ''} placeholder="Section title" onChange={(event) => updateCustomBlock(index, { title: event.target.value })} /><textarea value={block.body || ''} placeholder="Optional supporting text" onChange={(event) => updateCustomBlock(index, { body: event.target.value })} rows={3} />{block.image && <img src={block.image} alt={block.title || 'Custom addition'} />}<button className="fr-text-btn" onClick={() => removeCustomBlock(index)}>Remove</button></article>)}</div>
             </div>
 
             <footer className="fr-editor-footer"><button className="fr-btn" onClick={() => setEditorOpen(false)}>Review changes</button><button className="fr-btn primary" onClick={() => { setEditorOpen(false); handlePDF(); }}>Finalise and download PDF</button></footer>
