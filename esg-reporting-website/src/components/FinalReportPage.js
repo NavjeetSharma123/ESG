@@ -3,6 +3,8 @@ import { useHistory, useLocation } from 'react-router-dom';
 import { generateBRSRReportPDFFromTemplate, generateESGReportPDF } from '../utils/reportGenerator';
 import { getAnswer, isAnswered, loadESGDraft } from '../utils/answerManagement';
 import { buildDisclosureHierarchy, generateInvestorESGReportPDF } from './reportTemplates/InvestorESGReportPdfTemplate';
+import ProductsServicesTables from './ProductsServicesTables';
+import { hasProductsServicesAnswer, isProductsServicesQuestion } from '../utils/brsrProductsServices';
 import './FinalReportPage.css';
 
 const FRAMEWORK_FIELDS = {
@@ -150,6 +152,8 @@ const FinalReportPage = () => {
     return [indicator.label, dynamicQuestion ? answerFor(dynamicQuestion) : undefined, indicator.unit];
   });
   const editableQuestions = questions;
+  const productsServicesQuestion = questions.find(isProductsServicesQuestion);
+  const productsServicesAnswer = productsServicesQuestion ? answerFor(productsServicesQuestion) : null;
   const placementOptions = useMemo(() => {
     const options = [{ value: 'append', label: 'End of report' }];
     disclosureGroups.forEach((group) => {
@@ -256,6 +260,8 @@ const FinalReportPage = () => {
         {[['Questions', totalQuestions, `${answered} answered`], ['Completion', `${completion}%`, `${pending} pending`], ['Framework coverage', `${coverage}%`, `${selectedFrameworks.length} selected`], ['Auto-populated', autoPopulated, `${Math.round(autoPopulated / totalQuestions * 100)}% success rate`], ['Evidence', evidenceCount, 'documents uploaded'], ['Review comments', commentsCount, commentsCount ? 'require attention' : 'all clear'], ['Material topics', materialTopics.length, 'topics covered'], ['Time saved', `${Math.max(4, reused * 2 + autoPopulated)}h`, `${reused} answers reused`]].map(([label, value, note]) => <article className="fr-kpi" key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></article>)}
       </section>
 
+      {productsServicesQuestion && hasProductsServicesAnswer(productsServicesAnswer) && <section className="fr-section fr-products-services-report"><span className="fr-kicker">BRSR DISCLOSURE</span><h2>{productsServicesQuestion.question}</h2><ProductsServicesTables value={productsServicesAnswer} readOnly /></section>}
+
       <div className="fr-layout">
         <div className="fr-content">
           <section className="fr-section" id="frameworks"><div className="fr-section-head"><div><span className="fr-kicker">REPORTING PROGRESS</span><h2>Framework readiness</h2></div><span className="fr-muted">Select a card for details</span></div><div className="fr-framework-grid">{frameworkCards.map((card) => <button key={card.name} className={`fr-framework-card ${openFramework === card.name ? 'open' : ''}`} onClick={() => setOpenFramework(openFramework === card.name ? null : card.name)}><div className="fr-framework-title"><i className={card.percent >= 80 ? 'green' : card.percent >= 50 ? 'amber' : 'red'} /><strong>{card.name}</strong><b>{card.percent}%</b></div><Progress value={card.percent} tone={card.percent >= 80 ? 'green' : card.percent >= 50 ? 'amber' : 'red'} /><div className="fr-framework-meta"><span>{card.complete} answered</span><span>{card.pending} pending</span><span>{card.total} total</span></div>{openFramework === card.name && <div className="fr-framework-detail">Completing {card.pending} remaining disclosures will bring this framework to submission readiness.</div>}</button>)}</div></section>
@@ -308,7 +314,7 @@ const FinalReportPage = () => {
               </div>
             </div>
 
-            {!!editableQuestions.length && <div className="fr-editor-section"><div className="fr-editor-section-head"><h3>Disclosure answers</h3><span>{editableQuestions.length} visible questions shown</span></div><div className="fr-answer-editor-list">{editableQuestions.map((question) => <label key={question.id}><span>{question.question || question.id}</span><textarea value={answerFor(question) || ''} onChange={(event) => updateAnswerField(question.id, event.target.value)} rows={3} /></label>)}</div></div>}
+            {!!editableQuestions.length && <div className="fr-editor-section"><div className="fr-editor-section-head"><h3>Disclosure answers</h3><span>{editableQuestions.length} visible questions shown</span></div><div className="fr-answer-editor-list">{editableQuestions.map((question) => isProductsServicesQuestion(question) ? <div className="fr-products-services-editor" key={question.id}><span>{question.question || question.id}</span><ProductsServicesTables value={answerFor(question)} onChange={(value) => updateAnswerField(question.id, value)} /></div> : <label key={question.id}><span>{question.question || question.id}</span><textarea value={answerFor(question) || ''} onChange={(event) => updateAnswerField(question.id, event.target.value)} rows={3} /></label>)}</div></div>}
 
             <div className="fr-editor-section">
               <div className="fr-editor-section-head"><h3>Text and image additions</h3><span>Included in preview and ESG PDF</span></div>

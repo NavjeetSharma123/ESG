@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { isAnswered } from '../../utils/answerManagement';
+import { isProductsServicesQuestion, normalizeProductsServicesAnswer } from '../../utils/brsrProductsServices';
 
 const GREEN = [20, 94, 65];
 const GREEN_DARK = [12, 54, 38];
@@ -133,6 +134,35 @@ export const generateInvestorESGReportPDF = ({ companyName, industry, reportingP
   const chip = (value, color, x, yy) => { doc.setFont('helvetica', 'bold'); doc.setFontSize(6.8); const w = doc.getTextWidth(clean(value)) + 7; set('setFillColor', color); doc.roundedRect(x, yy - 4, w, 6, 2, 2, 'F'); doc.setTextColor(255, 255, 255); doc.text(clean(value), x + 3.5, yy); return w; };
   const card = (x, yy, w, heading, value, note, color = GREEN) => { set('setFillColor', SOFT); set('setDrawColor', LINE); doc.roundedRect(x, yy, w, 28, 3, 3, 'FD'); label(heading, x + 5, yy + 7, color); doc.setFont('helvetica', 'bold'); doc.setFontSize(15); set('setTextColor', GREEN_DARK); doc.text(clean(value), x + 5, yy + 16); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.3); set('setTextColor', MUTED); doc.text(doc.splitTextToSize(clean(note), w - 10), x + 5, yy + 23); };
   const responseFor = (q) => { const response = typeof answerFor === 'function' ? answerFor(q) : q.answer; return isAnswered(response) ? response : '[sample answer]'; };
+  const renderProductsServicesTable = (heading, columns, rows, fields, groupTitle) => {
+    const colWidths = [14, 58, 44, 62];
+    const rowLines = (row, index) => [String(index + 1), ...fields.map((field) => clean(row[field]) || '—')].map((cell, column) => measureTextHeight(cell, colWidths[column] - 4, 7.5, 3.7).lines);
+    const drawHeader = () => {
+      const headerLines = columns.map((column, index) => measureTextHeight(column, colWidths[index] - 4, 7.4, 3.6, 'bold').lines);
+      const headerHeight = Math.max(...headerLines.map((lines) => lines.length * 3.6), 7) + 5;
+      ensure(headerHeight + 12, groupTitle);
+      let x = margin;
+      set('setFillColor', MINT); set('setDrawColor', LINE); doc.rect(margin, y, contentWidth, headerHeight, 'FD');
+      headerLines.forEach((lines, index) => { doc.setFont('helvetica', 'bold'); doc.setFontSize(7.4); set('setTextColor', GREEN_DARK); doc.text(lines, x + 2, y + 4); x += colWidths[index]; });
+      y += headerHeight;
+    };
+    ensure(12, groupTitle); doc.setFont('helvetica', 'bold'); doc.setFontSize(10); set('setTextColor', GREEN_DARK); doc.text(heading, margin, y); y += 5;
+    drawHeader();
+    rows.forEach((row, index) => {
+      const lines = rowLines(row, index);
+      const rowHeight = Math.max(...lines.map((cellLines) => cellLines.length * 3.7), 7) + 5;
+      if (y + rowHeight > PAGE_BOTTOM) { addPage(groupTitle); drawHeader(); }
+      let x = margin;
+      lines.forEach((cellLines, column) => { set('setDrawColor', LINE); doc.rect(x, y, colWidths[column], rowHeight, 'S'); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); set('setTextColor', INK); doc.text(cellLines, x + 2, y + 4); x += colWidths[column]; });
+      y += rowHeight;
+    });
+    y += FLOW_GAP;
+  };
+  const renderProductsServicesDisclosure = (answer, groupTitle) => {
+    const tables = normalizeProductsServicesAnswer(answer);
+    renderProductsServicesTable('Products/Services', ['S. No.', 'Product/Service', 'NIC Code', '% of total Turnover contributed'], tables.productServices, ['productService', 'nicCode', 'turnoverPercent'], groupTitle);
+    renderProductsServicesTable('Business activities', ['S. No.', 'Description of Main Activity', 'Description of Business Activity', '% of Turnover of the entity'], tables.businessActivities, ['mainActivity', 'businessActivity', 'turnoverPercent'], groupTitle);
+  };
   const measureTextHeight = (value, maxWidth, size = RESPONSE_FONT_SIZE, lineHeight = RESPONSE_LINE_HEIGHT, font = 'normal', fallback = 'Not disclosed') => {
     doc.setFont('helvetica', font);
     doc.setFontSize(size);
@@ -227,6 +257,10 @@ export const generateInvestorESGReportPDF = ({ companyName, industry, reportingP
 
   const renderDisclosureCard = (question, groupTitle) => {
     const answer = responseFor(question);
+    if (isProductsServicesQuestion(question) && answer && typeof answer === 'object' && !Array.isArray(answer)) {
+      renderProductsServicesDisclosure(answer, groupTitle);
+      return;
+    }
     const [status, statusColor] = statusFor(question, answer);
     const frameworks = frameworksOf(question);
     const tags = frameworks.length ? frameworks.join(' | ') : 'No framework tag';

@@ -9,6 +9,8 @@ import {
   getAnswer, getLinkedQuestionIds, isAnswered, loadESGAnswers,
   normalizeQuestionId, propagateLinkedAnswer, questionMatchesSector, saveESGAnswers,
 } from '../utils/answerManagement';
+import { createProductsServicesAnswer, isProductsServicesQuestion } from '../utils/brsrProductsServices';
+import ProductsServicesTables from './ProductsServicesTables';
 
 const SUPPORTING_DOCUMENTS = [
   { key: 'financialStatements', label: 'Financial Statements' },
@@ -179,7 +181,7 @@ const buildQuestionWithAnswer = (question, answers) => {
 
   return {
     ...question,
-    answer: `${String(resolvedAnswer)}${hasAnswer ? '' : DEFAULT_ANSWER_MARKER}`,
+    answer: hasAnswer ? resolvedAnswer : `${String(resolvedAnswer)}${DEFAULT_ANSWER_MARKER}`,
     isDefaultAnswer: !hasAnswer,
   };
 };
@@ -219,11 +221,12 @@ const ESGReportForm = () => {
   const [documentStorageStatus, setDocumentStorageStatus] = useState('');
   const [cinFolderName, setCinFolderName] = useState('');
 
-  const handleQuestionAnswer = (id, value) => {
+  const handleQuestionAnswer = (id, value, propagate = true) => {
     const normalizedId = normalizeQuestionId(id);
     setManuallyEditedAnswers((prev) => ({ ...prev, [normalizedId]: true }));
-    setQuestionAnswers((prev) => propagateLinkedAnswer(
-      prev, questions, normalizedId, value, manuallyEditedAnswers
+    setQuestionAnswers((prev) => (propagate
+      ? propagateLinkedAnswer(prev, questions, normalizedId, value, manuallyEditedAnswers)
+      : { ...prev, [normalizedId]: value }
     ));
     setHasUnsavedChanges(true);
     setSaveError('');
@@ -232,6 +235,10 @@ const ESGReportForm = () => {
   const renderQuestionInput = (q) => {
     const type = String(q.questionType || '').toLowerCase();
     const value = getAnswer(questionAnswers, q.id);
+
+    if (isProductsServicesQuestion(q)) {
+      return <ProductsServicesTables value={value || createProductsServicesAnswer()} onChange={(nextValue) => handleQuestionAnswer(q.id, nextValue, false)} />;
+    }
 
     if (type === 'yes/no') {
       return (

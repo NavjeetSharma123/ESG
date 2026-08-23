@@ -12,6 +12,7 @@ import ESGReportForm from './components/ESGReportForm';
 import BRSRPage from './components/BRSRPage';
 import FinalReportPage from './components/FinalReportPage';
 import CompaniesPage from './components/CompaniesPage';
+import AboutPage from './components/AboutPage';
 import { isAuthenticated } from './utils/auth';
 import './assets/styles.css';
 
@@ -46,6 +47,7 @@ function App() {
             <Route path="/services" component={Services} />
             <Route path="/companies" component={CompaniesPage} />
             <Route path="/demo" component={DemoForm} />
+            <Route path="/about" component={AboutPage} />
             <Route path="/login" component={LoginPage} />
             <Route path="/register" component={RegisterPage} />
             <ProtectedRoute path="/profile" component={ProfilePage} />

@@ -1,0 +1,10 @@
+.products-services-tables { display: grid; gap: 1.25rem; }
+.products-services-tables h3 { margin: 0 0 .5rem; font-size: .95rem; color: var(--color-text-primary); }
+.products-services-tables__scroll { overflow-x: auto; border: 1px solid var(--color-border); }
+.products-services-tables table { width: 100%; min-width: 680px; border-collapse: collapse; background: var(--color-surface); }
+.products-services-tables th, .products-services-tables td { border: 1px solid var(--color-border); padding: .55rem .65rem; vertical-align: top; text-align: left; }
+.products-services-tables th { font-size: .8rem; font-weight: var(--font-semibold); color: var(--color-text-primary); background: var(--color-bg-muted); }
+.products-services-tables td:first-child { width: 4.5rem; text-align: center; font-weight: var(--font-medium); }
+.products-services-tables input { box-sizing: border-box; width: 100%; min-width: 8rem; border: 0; border-radius: 0; background: transparent; color: var(--color-text-primary); padding: .2rem 0; font: inherit; outline-offset: 2px; }
+.products-services-tables input:focus { outline: 2px solid var(--color-focus-ring); }
+.products-services-tables.is-read-only td { color: var(--color-text-secondary); }
