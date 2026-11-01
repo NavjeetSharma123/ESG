@@ -7,124 +7,137 @@ const n = (val) => {
 };
 
 export const generateESGReportPDF = (data) => {
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 20;
-  let y = 20;
-  const lineHeight = 6;
-
-  const addText = (text, fontSize = 10, isBold = false) => {
-    doc.setFontSize(fontSize);
-    doc.setFont('helvetica', isBold ? 'bold' : 'normal');
-    const lines = doc.splitTextToSize(text, pageWidth - 2 * margin);
-    lines.forEach((line) => {
-      doc.text(line, margin, y);
-      y += lineHeight;
-    });
+  const source = data && typeof data === 'object' ? data : {};
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const width = doc.internal.pageSize.getWidth();
+  const height = doc.internal.pageSize.getHeight();
+  const margin = 18;
+  const contentWidth = width - margin * 2;
+  const ink = [35, 45, 43];
+  const green = [24, 83, 62];
+  const muted = [105, 116, 111];
+  const line = [220, 227, 222];
+  const cleanValue = (value) => Array.isArray(value) ? value.join(', ') : String(value ?? '').trim();
+  const provided = (value) => cleanValue(value) !== '';
+  const missing = 'Not provided';
+  const frameworks = Array.isArray(source.esgFrameworks) ? source.esgFrameworks.filter(Boolean).join(', ') : cleanValue(source.esgFrameworks);
+  const metrics = [
+    ['Scope 1 emissions', 'scope1Emissions', 'tCO2e', 'environmental'],
+    ['Scope 2 emissions', 'scope2Emissions', 'tCO2e', 'environmental'],
+    ['Scope 3 emissions', 'scope3Emissions', 'tCO2e', 'environmental'],
+    ['Energy consumption', 'energyConsumption', 'MWh', 'environmental'],
+    ['Renewable energy', 'renewableEnergyPercent', '%', 'environmental'],
+    ['Water usage', 'waterUsage', 'm3', 'environmental'],
+    ['Waste generated', 'wasteGenerated', 'tonnes', 'environmental'],
+    ['Waste recycled', 'wasteRecycledPercent', '%', 'environmental'],
+    ['Total employees', 'totalEmployees', 'people', 'social'],
+    ['Women in workforce', 'genderDiversityPercent', '%', 'social'],
+    ['Training per employee', 'trainingHoursPerEmployee', 'hours / employee', 'social'],
+    ['Recordable safety incidents', 'safetyIncidents', 'incidents', 'social'],
+    ['Community investment', 'communityInvestment', 'as reported', 'social'],
+    ['Employee turnover', 'employeeTurnoverPercent', '%', 'social'],
+    ['Board size', 'boardSize', 'directors', 'governance'],
+    ['Independent directors', 'independentDirectorsPercent', '%', 'governance'],
+  ];
+  const presentMetrics = metrics.filter(([, key]) => provided(source[key]));
+  const missingCompanyFields = ['companyName', 'industry', 'reportingPeriod', 'hqLocation'].filter((key) => !provided(source[key]));
+  const evidenceCount = Number(source.evidenceCount || 0);
+  let page = 1;
+  let y = 22;
+  let sectionTitle = 'Report overview';
+  const footer = () => {
+    doc.setDrawColor(...line); doc.line(margin, height - 15, width - margin, height - 15);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...muted);
+    doc.text(cleanValue(source.companyName) || 'ESG Sustainability Report', margin, height - 9);
+    doc.text(`Page ${page}`, width - margin, height - 9, { align: 'right' });
   };
-
-  const addSection = (title, content) => {
-    if (y > 260) {
-      doc.addPage();
-      y = 20;
-    }
-    doc.setFillColor(13, 59, 44);
-    doc.rect(0, y - 5, pageWidth, 8, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.text(title, margin, y + 2);
-    doc.setTextColor(0, 0, 0);
-    y += 12;
-    addText(content, 10, false);
-    y += 4;
+  const addPage = (title = sectionTitle) => {
+    footer(); doc.addPage(); page += 1; sectionTitle = title;
+    doc.setFillColor(...green); doc.rect(0, 0, width, 12, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(255, 255, 255); doc.text(title.toUpperCase(), margin, 8);
+    y = 23;
   };
+  const ensure = (needed = 12) => { if (y + needed > height - 21) addPage(); };
+  const write = (value, { size = 9, bold = false, color = ink, gap = 2, width: maxWidth = contentWidth } = {}) => {
+    doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(size); doc.setTextColor(...color);
+    const lines = doc.splitTextToSize(cleanValue(value) || missing, maxWidth);
+    ensure(lines.length * (size * 0.42) + gap + 1); doc.text(lines, margin, y); y += lines.length * (size * 0.42) + gap;
+  };
+  const heading = (value) => {
+    ensure(15); y += 3; doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...green); doc.text(value, margin, y); y += 7;
+    doc.setDrawColor(...line); doc.line(margin, y, width - margin, y); y += 4;
+  };
+  const row = (label, value, unit = '') => {
+    const display = provided(value) ? `${cleanValue(value)}${unit ? ` ${unit}` : ''}` : 'Not provided';
+    const lines = doc.splitTextToSize(display, contentWidth * 0.58);
+    const rowHeight = Math.max(7, lines.length * 4 + 3); ensure(rowHeight);
+    doc.setDrawColor(...line); doc.line(margin, y + rowHeight, width - margin, y + rowHeight);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...muted); doc.text(label, margin + 2, y + 4.5);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...ink); doc.text(lines, margin + contentWidth * 0.42, y + 4.5); y += rowHeight;
+  };
+  const sectionFor = { environmental: 'Environmental performance', social: 'Social performance', governance: 'Governance and business ethics' };
 
-  // Title
-  doc.setFillColor(22, 90, 62);
-  doc.rect(0, 0, pageWidth, 35, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(22);
-  doc.setFont('helvetica', 'bold');
-  doc.text('ESG Sustainability Report', margin, 20);
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`${n(data.companyName)} | Reporting Period: ${n(data.reportingPeriod)}`, margin, 28);
-  doc.setTextColor(0, 0, 0);
-  y = 45;
+  // Cover page: only user-supplied information is presented as company fact.
+  doc.setFillColor(249, 250, 248); doc.rect(0, 0, width, height, 'F');
+  doc.setFillColor(...green); doc.rect(0, 0, 9, height, 'F');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...green); doc.text('SUSTANICA  /  ESG REPORTING', margin + 5, 35);
+  doc.setFontSize(27); doc.setTextColor(...ink); doc.text(doc.splitTextToSize(cleanValue(source.companyName) || 'Company name not provided', 150), margin + 5, 66);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(19); doc.setTextColor(...green); doc.text('ESG & Sustainability Report', margin + 5, 94);
+  doc.setFontSize(10); doc.setTextColor(...muted); doc.text(`Reporting period: ${cleanValue(source.reportingPeriod) || missing}`, margin + 5, 105);
+  doc.setDrawColor(...line); doc.line(margin + 5, 119, width - margin, 119);
+  const coverRows = [
+    ['Industry', source.industry], ['Headquarters', source.hqLocation], ['Registered office', source.registeredAddress],
+    ['Reporting boundary', source.reportingBoundary], ['Applicable frameworks', frameworks], ['Publication date', source.publicationDate], ['Version', source.version || '1.0'],
+  ];
+  let coverY = 131;
+  coverRows.forEach(([label, value]) => {
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...muted); doc.text(label.toUpperCase(), margin + 5, coverY);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...ink); doc.text(doc.splitTextToSize(provided(value) ? cleanValue(value) : missing, contentWidth * 0.55), margin + 58, coverY); coverY += 13;
+  });
+  doc.setFontSize(8); doc.setTextColor(...muted); doc.text('Management-prepared report. No independent assurance is represented.', margin + 5, height - 24);
 
-  const esgFrameworks =
-    Array.isArray(data.esgFrameworks) && data.esgFrameworks.length
-      ? data.esgFrameworks.join(', ')
-      : 'N/A';
+  addPage('Executive summary');
+  heading('Executive summary');
+  write('This report presents information supplied for the selected reporting period. Missing data are identified as “Not provided”. Readiness or completion measures are reporting workflow indicators and do not represent independently verified ESG performance.', { size: 9.5, gap: 4 });
+  row('Company profile', [source.industry, source.hqLocation].filter(provided).map(cleanValue).join(' · '));
+  row('Selected frameworks', frameworks);
+  row('Reported workforce', source.totalEmployees || source.employeeCount, provided(source.totalEmployees || source.employeeCount) ? 'people' : '');
+  row('Evidence records attached', evidenceCount || source.evidenceCount, 'records');
+  heading('Management message');
+  write(provided(source.managementMessage) ? source.managementMessage : 'No management message was supplied. No leadership statement has been created for this report.', { size: 9 });
+  heading('Report quality summary');
+  row('Disclosures with values in this form', `${presentMetrics.length} of ${metrics.length}`);
+  row('Missing core company fields', missingCompanyFields.length ? missingCompanyFields.join(', ') : 'None identified in available fields');
+  row('Evidence status', evidenceCount ? `${evidenceCount} evidence record(s) reported; individual metric links were not available in this export` : 'Evidence not provided or not linked to this export');
+  row('Critical validation note', 'No automated source verification, duplicate-answer check, unit reconciliation, or framework-mapping validation is available in this form export.');
 
-  addSection(
-    '1. Company Information',
-    `Company: ${n(data.companyName)}\n` +
-      `Industry: ${n(data.industry)}\n` +
-      `Reporting Period: ${n(data.reportingPeriod)}\n` +
-      `Headquarters: ${n(data.hqLocation)}\n` +
-      `ESG Frameworks: ${esgFrameworks}\n` +
-      `Employees: ${n(data.employeeCount)}\n` +
-      `Revenue: ${n(data.revenue)}\n` +
-      `Website: ${n(data.website)}`
-  );
-
-  addSection(
-    '2. Environmental Metrics',
-    `Scope 1 Emissions (tCO₂e): ${n(data.scope1Emissions)}\n` +
-      `  - Fuel (stationary sources): ${n(data.scope1FuelStationaryDetails)}\n` +
-      `  - Company vehicle fuel: ${n(data.scope1CompanyVehicleDetails)}\n` +
-      `  - Refrigerants / AC leakage: ${n(data.scope1RefrigerantDetails)}\n` +
-      `  - Industrial process emissions: ${n(data.scope1ProcessEmissionsDetails)}\n` +
-      `Scope 2 Emissions (tCO₂e): ${n(data.scope2Emissions)}\n` +
-      `  - Electricity consumption: ${n(data.scope2ElectricityDetails)}\n` +
-      `  - Purchased heating / cooling / steam: ${n(data.scope2ThermalEnergyDetails)}\n` +
-      `Scope 3 Emissions (tCO₂e): ${n(data.scope3Emissions)}\n` +
-      `Energy Consumption (MWh): ${n(data.energyConsumption)}\n` +
-      `Renewable Energy %: ${n(data.renewableEnergyPercent)}\n` +
-      `Water Usage (m³): ${n(data.waterUsage)}\n` +
-      `Waste Generated (tons): ${n(data.wasteGenerated)}\n` +
-      `Waste Recycled %: ${n(data.wasteRecycledPercent)}\n` +
-      `Initiatives: ${n(data.environmentalInitiatives)}`
-  );
-
-  addSection(
-    '3. Social Metrics',
-    `Total Employees: ${n(data.totalEmployees)}\n` +
-      `Gender Diversity % (women): ${n(data.genderDiversityPercent)}\n` +
-      `Training Hours/Employee: ${n(data.trainingHoursPerEmployee)}\n` +
-      `Recordable Safety Incidents: ${n(data.safetyIncidents)}\n` +
-      `Community Investment ($): ${n(data.communityInvestment)}\n` +
-      `Employee Turnover %: ${n(data.employeeTurnoverPercent)}\n` +
-      `Initiatives: ${n(data.socialInitiatives)}`
-  );
-
-  addSection(
-    '4. Governance Metrics',
-    `Board Size: ${n(data.boardSize)}\n` +
-      `Independent Directors %: ${n(data.independentDirectorsPercent)}\n` +
-      `Sustainability Committee: ${n(data.sustainabilityCommittee)}\n` +
-      `ESG Targets Set: ${n(data.esgTargetsSet)}\n` +
-      `Ethics/Anti-corruption Policy: ${n(data.ethicsPolicy)}\n` +
-      `Initiatives: ${n(data.governanceInitiatives)}`
-  );
-
-  // Footer
-  if (y > 250) {
-    doc.addPage();
-    y = 20;
-  }
-  y += 10;
-  doc.setFontSize(9);
-  doc.setTextColor(100, 100, 100);
-  doc.text(
-    `Report generated on ${new Date().toLocaleDateString()} | ESG Sustainability Platform`,
-    pageWidth / 2,
-    y,
-    { align: 'center' }
-  );
-
+  const sections = [...new Set(presentMetrics.map(([, , , category]) => category))];
+  sections.forEach((category) => {
+    addPage(sectionFor[category]); heading(sectionFor[category]);
+    write('Values below are shown as entered. Source evidence and calculation methodology were not included in this form submission; no trend, target progress, or verification claim is inferred.', { size: 8.5, color: muted, gap: 4 });
+    presentMetrics.filter((item) => item[3] === category).forEach(([label, key, unit]) => row(label, source[key], unit));
+    const narrativeKey = category === 'environmental' ? 'environmentalInitiatives' : category === 'social' ? 'socialInitiatives' : 'governanceInitiatives';
+    if (provided(source[narrativeKey])) { heading('Company-provided narrative'); write(source[narrativeKey], { size: 9 }); }
+  });
+  addPage('Targets and methodology');
+  heading('Targets and future roadmap');
+  const targets = Array.isArray(source.targets) ? source.targets : [];
+  if (targets.length) targets.forEach((target) => write(`${target.topic || 'ESG topic'} | Baseline: ${target.baselineYear || missing} ${target.baselineValue || ''} | Target: ${target.targetYear || missing} ${target.targetValue || ''} | Status: ${target.status || missing}`, { size: 8.5 }));
+  else write('No targets, baseline years, or target values were provided.');
+  heading('Reporting methodology and limitations');
+  row('Reporting period', source.reportingPeriod);
+  row('Reporting boundary', source.reportingBoundary);
+  row('Methodology / calculation notes', source.methodology);
+  row('Data limitations and exclusions', source.dataLimitations);
+  row('Frameworks selected', frameworks);
+  write('A framework selection is not evidence of full alignment or compliance. Metric values are management-reported unless separately identified with a documented review status.', { size: 8.5, color: muted, gap: 4 });
+  heading('Evidence and assurance');
+  row('Evidence status', evidenceCount ? 'Supporting evidence records reported; this export does not establish evidence review' : 'No evidence records reported');
+  row('Assurance provider', source.assuranceProvider || 'Not appointed');
+  row('Assurance standard and scope', source.assuranceStandard || source.assuranceScope || 'Not provided');
+  write('This report has not been independently assured unless a documented engagement is specified above. No assurance opinion is generated by this report tool.', { size: 8.5, bold: true, color: green });
+  footer();
+  doc.setProperties({ title: `${cleanValue(source.companyName) || 'Company'} ESG & Sustainability Report`, subject: 'Management-reported ESG information and reporting limitations', author: 'Sustanica' });
   return doc.output('blob');
 };
 

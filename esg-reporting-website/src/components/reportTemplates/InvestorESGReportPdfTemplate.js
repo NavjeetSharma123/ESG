@@ -39,19 +39,24 @@ const tcfdPillarOf = (question) => {
 };
 
 // Topic-first hierarchy. TCFD rows are always placed in one of its four recommended pillars.
-export const buildDisclosureHierarchy = (questions = []) => {
-  const topics = new Map();
+export const buildDisclosureHierarchy = (questions = [], preferredOrder = []) => {
+  const frameworks = new Map();
   questions.filter(isVisible).forEach((question) => {
-    const topic = topicOf(question);
-    if (!topics.has(topic)) topics.set(topic, new Map());
-    const isTcfd = frameworksOf(question).some((fw) => /tcfd/i.test(fw));
-    const section = isTcfd ? `TCFD - ${tcfdPillarOf(question)}` : clean(question.subsection || question.subSection || question.section || question.department || 'General disclosures');
-    if (!topics.get(topic).has(section)) topics.get(topic).set(section, []);
-    topics.get(topic).get(section).push(question);
+    const tags = frameworksOf(question);
+    // Keep every question visible, even if it has no framework tag.
+    (tags.length ? tags : ['Unmapped disclosures']).forEach((framework) => {
+      if (!frameworks.has(framework)) frameworks.set(framework, new Map());
+      const section = clean(question.subsection || question.subSection || question.section || question.department || 'General disclosures');
+      if (!frameworks.get(framework).has(section)) frameworks.get(framework).set(section, []);
+      frameworks.get(framework).get(section).push(question);
+    });
   });
-  const order = ['Climate & Environment', 'Workforce & Communities', 'Governance & Business Conduct', 'Supply Chain', 'Product & Customers'];
-  return [...topics.entries()].sort(([a], [b]) => order.indexOf(a) - order.indexOf(b)).map(([topic, sections]) => ({
-    framework: topic,
+  const preferred = Array.isArray(preferredOrder) ? preferredOrder : [];
+  return [...frameworks.entries()].sort(([a], [b]) => {
+    const rank = (name) => { const index = preferred.findIndex((item) => name.toLowerCase().includes(String(item).toLowerCase()) || String(item).toLowerCase().includes(name.toLowerCase())); return index < 0 ? preferred.length : index; };
+    return rank(a) - rank(b) || a.localeCompare(b);
+  }).map(([framework, sections]) => ({
+    framework,
     subsections: [...sections.entries()].map(([name, items]) => ({ name, questions: items.sort(compareQuestions) })).sort((a, b) => a.name.localeCompare(b.name)),
   }));
 };
@@ -82,7 +87,7 @@ const periodWindow = (reportingPeriod, supplied) => {
   return year ? `1 January ${year} to 31 December ${year} (derived from reporting period)` : 'Not provided; confirm before external publication';
 };
 
-export const generateInvestorESGReportPDF = ({ companyName, industry, reportingPeriod, dataCollectionWindow, readiness, groups = [], answerFor, visualData = {}, executive = {}, assurance = {}, customBlocks = [] }) => {
+export const generateInvestorESGReportPDF = ({ companyName, industry, reportingPeriod, dataCollectionWindow, readiness, groups = [], answerFor, visualData = {}, executive = {}, assurance = {}, customBlocks = [], consolidatedParagraphs = [], frameworkOrder = [] }) => {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const width = doc.internal.pageSize.getWidth(); const height = doc.internal.pageSize.getHeight();
   const margin = 16; const contentWidth = width - margin * 2; const name = clean(companyName) || 'ESG Sustainability Report';
@@ -101,8 +106,8 @@ export const generateInvestorESGReportPDF = ({ companyName, industry, reportingP
   const CARD_BOTTOM_PADDING = 7;
   const CARD_LABEL_GAP = 5;
   const DISCLOSURE_ONLY_FOOTER_HEIGHT = 7;
-  const DISCLOSURE_FONT_SIZE = 9.1;
-  const DISCLOSURE_LINE_HEIGHT = 4.5;
+  const DISCLOSURE_FONT_SIZE = 12;
+  const DISCLOSURE_LINE_HEIGHT = 5.1;
   const RESPONSE_FONT_SIZE = 8.4;
   const RESPONSE_LINE_HEIGHT = 4.2;
   const META_LINE_HEIGHT = 4;
@@ -133,7 +138,7 @@ export const generateInvestorESGReportPDF = ({ companyName, industry, reportingP
   const bookmark = (value) => { if (outline) outline.add(null, clean(value), { pageNumber: page }); };
   const chip = (value, color, x, yy) => { doc.setFont('helvetica', 'bold'); doc.setFontSize(6.8); const w = doc.getTextWidth(clean(value)) + 7; set('setFillColor', color); doc.roundedRect(x, yy - 4, w, 6, 2, 2, 'F'); doc.setTextColor(255, 255, 255); doc.text(clean(value), x + 3.5, yy); return w; };
   const card = (x, yy, w, heading, value, note, color = GREEN) => { set('setFillColor', SOFT); set('setDrawColor', LINE); doc.roundedRect(x, yy, w, 28, 3, 3, 'FD'); label(heading, x + 5, yy + 7, color); doc.setFont('helvetica', 'bold'); doc.setFontSize(15); set('setTextColor', GREEN_DARK); doc.text(clean(value), x + 5, yy + 16); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.3); set('setTextColor', MUTED); doc.text(doc.splitTextToSize(clean(note), w - 10), x + 5, yy + 23); };
-  const responseFor = (q) => { const response = typeof answerFor === 'function' ? answerFor(q) : q.answer; return isAnswered(response) ? response : '[sample answer]'; };
+  const responseFor = (q) => { const response = typeof answerFor === 'function' ? answerFor(q) : q.answer; return isAnswered(response) ? response : 'Not provided'; };
   const renderProductsServicesTable = (heading, columns, rows, fields, groupTitle) => {
     const colWidths = [14, 58, 44, 62];
     const rowLines = (row, index) => [String(index + 1), ...fields.map((field) => clean(row[field]) || '—')].map((cell, column) => measureTextHeight(cell, colWidths[column] - 4, 7.5, 3.7).lines);
@@ -261,6 +266,28 @@ export const generateInvestorESGReportPDF = ({ companyName, industry, reportingP
       renderProductsServicesDisclosure(answer, groupTitle);
       return;
     }
+    const answerLines = measureTextHeight(answer, contentWidth - 12, 9.5, 4.3).lines;
+    const questionLines = measureTextHeight(question.question || question.id, contentWidth - 12, 12, 5.2, 'bold', 'Untitled disclosure').lines;
+    const compactHeight = 8 + questionLines.length * 5.2 + answerLines.length * 4.3 + 8;
+    ensure(compactHeight, groupTitle);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); set('setTextColor', INK);
+    doc.text(questionLines, margin + 2, y + 5.5);
+    y += questionLines.length * 5.2 + 1;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); set('setTextColor', INK);
+    doc.text(answerLines, margin + 2, y + 4.3);
+    y += answerLines.length * 4.3 + 1;
+    const paragraph = consolidatedParagraphs.find((item) => item.questionIds.includes(String(question.id)));
+    const mappedPage = paragraph ? paragraphPages[paragraph.id] : null;
+    const [compactStatus] = statusFor(question, answer);
+    const referenceLine = `${question.code || question.id} · ${compactStatus}${paragraph ? ` · ${paragraph.id}, p. ${mappedPage || 'see narrative'}` : ''}`;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); set('setTextColor', MUTED); doc.text(doc.splitTextToSize(clean(referenceLine), contentWidth - 4), margin + 2, y + 3.5);
+    y += 5;
+    set('setDrawColor', LINE); doc.line(margin, y, width - margin, y); y += 3;
+    return;
+    if (isProductsServicesQuestion(question) && answer && typeof answer === 'object' && !Array.isArray(answer)) {
+      renderProductsServicesDisclosure(answer, groupTitle);
+      return;
+    }
     const [status, statusColor] = statusFor(question, answer);
     const frameworks = frameworksOf(question);
     const tags = frameworks.length ? frameworks.join(' | ') : 'No framework tag';
@@ -375,6 +402,19 @@ export const generateInvestorESGReportPDF = ({ companyName, industry, reportingP
     if (/year.?on.?year.*emission|emission.*trend/.test(clean(question.question).toLowerCase())) emissionsChart();
   };
 
+  const paragraphPages = {};
+  if (consolidatedParagraphs.length) {
+    addPage('Consolidated ESG narrative'); bookmark('Consolidated ESG narrative'); title('Consolidated ESG narrative', 'Source-linked draft');
+    text('Paragraphs preserve the supplied response wording. They are drafts for human validation; no AI assurance or independent verification is implied.', { size: 8.5, line: 4.3, color: MUTED });
+    consolidatedParagraphs.forEach((paragraph) => {
+      ensure(25, 'Consolidated ESG narrative');
+      title(`${paragraph.id} · ${paragraph.heading}`, paragraph.pillar); paragraphPages[paragraph.id] = page;
+      text(paragraph.narrative, { size: 9, line: 4.6 });
+      text(`Sources: ${paragraph.questionIds.join(', ')} | Frameworks: ${paragraph.frameworks.join(', ') || 'Not tagged'} | Review: ${paragraph.reviewStatus}${paragraph.conflict ? ' | CONFLICT FLAGGED' : ''}${paragraph.missingInformation.length ? ` | Missing: ${paragraph.missingInformation.join('; ')}` : ''}`, { size: 7.5, line: 3.8, color: paragraph.conflict ? RED : MUTED });
+      y += FLOW_GAP;
+    });
+  }
+
   groups.forEach((group) => {
     addPage(group.framework);
     bookmark(group.framework);
@@ -395,6 +435,24 @@ export const generateInvestorESGReportPDF = ({ companyName, industry, reportingP
     bookmark('Management additions');
     title('Management additions', 'Final review content');
     renderCustomBlocks(appendBlocks);
+  }
+
+  if (consolidatedParagraphs.length) {
+    addPage('Framework disclosure references'); bookmark('Framework disclosure references'); title('Framework disclosure references', 'Paragraph index');
+    const orderedGroups = [...groups].sort((a, b) => {
+      const rank = (group) => { const matched = frameworkOrder.findIndex((framework) => group.framework.toLowerCase().includes(framework.toLowerCase()) || framework.toLowerCase().includes(group.framework.toLowerCase())); return matched < 0 ? frameworkOrder.length : matched; };
+      return rank(a) - rank(b) || a.framework.localeCompare(b.framework);
+    });
+    orderedGroups.forEach((group) => {
+      title(group.framework, 'Framework-wise references');
+      group.subsections.forEach((section) => section.questions.forEach((question) => {
+        const paragraph = consolidatedParagraphs.find((item) => item.questionIds.includes(String(question.id)));
+        const paragraphPage = paragraph ? paragraphPages[paragraph.id] : null;
+        const disclosure = `${question.code || question.id} · ${question.question || question.id}`;
+        const status = paragraph ? (paragraph.coverage.find((item) => item.questionId === String(question.id))?.status || 'Partial') : (isAnswered(answerFor(question)) ? 'Disclosed · not consolidated' : 'Not addressed');
+        text(`${disclosure}\nReference: ${paragraph ? `${paragraph.id}, page ${paragraphPage || 'see narrative'}` : 'No paragraph reference'} · Coverage: ${status}${paragraph?.conflict ? ' · Conflict flagged' : ''}`, { size: 8.2, line: 4.1, color: INK });
+      }));
+    });
   }
 
   addPage('Assurance statement'); bookmark('Assurance statement'); title('Assurance statement', 'External assurance'); text(`Assurance provider: ${clean(assurance.provider) || 'Not appointed'}\nScope: ${clean(assurance.scope) || 'No assurance scope has been defined'}\nStandard used: ${clean(assurance.standard) || 'Not specified'}\nLevel of assurance: ${clean(assurance.level) || 'Not assured'}\nLimitations: ${clean(assurance.limitations) || 'This report is a management-prepared draft. Evidence availability, completeness and the accuracy of disclosures have not been independently assured.'}`, { size: 9.5, line: 5.4 }); y += 7; text('No statement in this report should be read as an independent assurance opinion unless a named assurance provider, scope, standard and level of assurance are completed above.', { size: 8.5, line: 4.3, color: RED, font: 'bold' });

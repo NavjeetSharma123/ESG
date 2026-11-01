@@ -5,6 +5,7 @@ import { getAnswer, isAnswered, loadESGDraft } from '../utils/answerManagement';
 import { buildDisclosureHierarchy, generateInvestorESGReportPDF } from './reportTemplates/InvestorESGReportPdfTemplate';
 import ProductsServicesTables from './ProductsServicesTables';
 import { hasProductsServicesAnswer, isProductsServicesQuestion } from '../utils/brsrProductsServices';
+import { buildDisclosureIntelligence, DEFAULT_FRAMEWORK_ORDER } from '../utils/disclosureIntelligence';
 import './FinalReportPage.css';
 
 const FRAMEWORK_FIELDS = {
@@ -59,6 +60,10 @@ const getQuestionLookupText = (question) => normalizeLookupText([
   question.framework,
   question.department,
 ].filter(Boolean).join(' '));
+const frameworkNamesForQuestion = (question) => {
+  const values = [question?.framework, question?.frameworks].flatMap((value) => Array.isArray(value) ? value : String(value || '').split(/[,;|]+/));
+  return [...new Set(values.map((value) => String(value || '').trim()).filter(Boolean))].join(', ') || 'Unmapped';
+};
 const truncateLabel = (value, length = 92) => {
   const text = String(value || '').trim();
   return text.length > length ? `${text.slice(0, length - 3)}...` : text;
@@ -83,6 +88,8 @@ const FinalReportPage = () => {
   const [editedData, setEditedData] = useState(initialFlatData);
   const [editedAnswers, setEditedAnswers] = useState(state.reportAnswers || state.questionAnswers || state.answers || {});
   const [customBlocks, setCustomBlocks] = useState(state.customBlocks || []);
+  const [paragraphEdits, setParagraphEdits] = useState({});
+  const [frameworkOrder, setFrameworkOrder] = useState(DEFAULT_FRAMEWORK_ORDER);
   const flatData = editedData || {};
   const reportAnswers = editedAnswers || {};
 
@@ -95,6 +102,9 @@ const FinalReportPage = () => {
     if (isAnswered(saved)) return saved;
     return question.isDefaultAnswer === false ? question.answer : undefined;
   };
+  const generatedParagraphs = buildDisclosureIntelligence(questions, answerFor, { reportingPeriod: flatData.reportingPeriod || flatData.financialYear });
+  const disclosureParagraphs = generatedParagraphs.map((paragraph) => ({ ...paragraph, ...(paragraphEdits[paragraph.id] || {}) }));
+  const updateParagraph = (id, updates) => setParagraphEdits((previous) => ({ ...previous, [id]: { ...previous[id], ...updates, edited: true, reviewStatus: 'Pending Validation', validationStatus: 'Edited - Pending Revalidation' } }));
   const values = questions.length ? questions.map(answerFor) : Object.values(flatData || {});
   const totalQuestions = Math.max(values.length, 1);
   const answered = values.filter(isAnswered).length;
@@ -102,7 +112,7 @@ const FinalReportPage = () => {
   const completion = Math.round((answered / totalQuestions) * 100);
   const companyName = flatData.companyName || 'Your organisation';
   const selectedFrameworks = source === 'ESG' && Array.isArray(esgData.esgFrameworks) && esgData.esgFrameworks.length ? esgData.esgFrameworks : [source];
-  const disclosureGroups = buildDisclosureHierarchy(questions, selectedFrameworks);
+  const disclosureGroups = buildDisclosureHierarchy(questions, frameworkOrder);
   const industry = flatData.industry || flatData.sector || 'Industry not specified';
   const reportingPeriod = flatData.reportingPeriod || flatData.financialYear || 'Current reporting period';
   const dataCollectionWindow = flatData.dataCollectionWindow || state.dataCollectionWindow || flatData.reportingDataCollectionWindow;
@@ -200,6 +210,8 @@ const FinalReportPage = () => {
           readiness,
           groups: disclosureGroups,
           answerFor,
+          consolidatedParagraphs: disclosureParagraphs,
+          frameworkOrder,
           visualData: {
             completion,
             coverage,
@@ -266,6 +278,9 @@ const FinalReportPage = () => {
         <div className="fr-content">
           <section className="fr-section" id="frameworks"><div className="fr-section-head"><div><span className="fr-kicker">REPORTING PROGRESS</span><h2>Framework readiness</h2></div><span className="fr-muted">Select a card for details</span></div><div className="fr-framework-grid">{frameworkCards.map((card) => <button key={card.name} className={`fr-framework-card ${openFramework === card.name ? 'open' : ''}`} onClick={() => setOpenFramework(openFramework === card.name ? null : card.name)}><div className="fr-framework-title"><i className={card.percent >= 80 ? 'green' : card.percent >= 50 ? 'amber' : 'red'} /><strong>{card.name}</strong><b>{card.percent}%</b></div><Progress value={card.percent} tone={card.percent >= 80 ? 'green' : card.percent >= 50 ? 'amber' : 'red'} /><div className="fr-framework-meta"><span>{card.complete} answered</span><span>{card.pending} pending</span><span>{card.total} total</span></div>{openFramework === card.name && <div className="fr-framework-detail">Completing {card.pending} remaining disclosures will bring this framework to submission readiness.</div>}</button>)}</div></section>
 
+          {!!questions.length && <section className="fr-section fr-framework-questions" hidden
+          ><div className="fr-section-head"><div><span className="fr-kicker">FRAMEWORK DISCLOSURES</span><h2>Questions by framework</h2></div><label>Framework order<select value={frameworkOrder.join('|')} onChange={(event) => setFrameworkOrder(event.target.value.split('|'))}>{[DEFAULT_FRAMEWORK_ORDER, [...DEFAULT_FRAMEWORK_ORDER].reverse()].map((order) => <option key={order.join('|')} value={order.join('|')}>{order.join(' → ')}</option>)}</select></label></div><p className="fr-intro">Every question appears under its tagged framework. Text is 12 px; long answers continue naturally.</p>{disclosureGroups.map((group) => <section className="fr-framework-question-group" key={group.framework}><h3>{group.framework}</h3>{group.subsections.map((section) => <div key={`${group.framework}-${section.name}`}><h4>{section.name}</h4>{section.questions.map((question) => { const paragraph = disclosureParagraphs.find((item) => item.questionIds.includes(String(question.id))); return <article className="fr-framework-question" key={`${group.framework}-${question.id}`}><div><strong>{question.disclosureId || question.code || question.id}</strong><span>{frameworkNamesForQuestion(question)}</span></div><p>{question.question || 'Question text unavailable'}</p><p className="fr-framework-answer">{answerFor(question) || 'Not provided'}</p><small>{paragraph ? `${paragraph.id} · ${paragraph.reviewStatus}` : 'No consolidated paragraph reference'} · {isAnswered(answerFor(question)) ? 'Disclosed' : 'Not addressed'}</small></article>; })}</div>)}</section>)}</section>}
+
           <section className="fr-section"><div className="fr-section-head"><div><span className="fr-kicker">SMART MAPPING</span><h2>Cross-framework efficiency</h2></div></div><div className="fr-efficiency"><div className="fr-callout"><span>↗</span><div><strong>{reused + autoPopulated} disclosures reused</strong><p>Answers mapped once and applied wherever frameworks overlap.</p></div></div><div className="fr-mini-stats"><div><strong>{Math.max(4, reused * 2 + autoPopulated)}h</strong><span>estimated time saved</span></div><div><strong>{reused}</strong><span>duplicates eliminated</span></div><div><strong>{Math.round((reused + autoPopulated) / totalQuestions * 100)}%</strong><span>automation achieved</span></div></div></div></section>
 
           <section className="fr-section"><div className="fr-section-head"><div><span className="fr-kicker">UNLOCK MORE VALUE</span><h2>Coverage you already have</h2></div></div><p className="fr-intro">Your existing answers have already advanced frameworks you did not select.</p><div className="fr-coverage-list">{unselected.map((item) => <div className="fr-coverage-row" key={item.name}><div><strong>{item.name}</strong><span>{item.covered}/{item.total} questions covered</span></div><div className="fr-coverage-progress"><Progress value={item.percent} /><b>{item.percent}%</b></div><button onClick={() => history.push('/')}>Add framework</button></div>)}</div>{unselected[0] && <div className="fr-opportunity">You are already <strong>{unselected[0].percent}% ready</strong> for {unselected[0].name} reporting.</div>}</section>
@@ -331,3 +346,4 @@ const FinalReportPage = () => {
 };
 
 export default FinalReportPage;
+

@@ -1274,7 +1274,7 @@ const ESGReportForm = () => {
           </div>
         </section>
 
-        <section className="form-section questions-section">
+        <section hidden="true" className="form-section questions-section">
           <h2>ESG Question Bank</h2>
           <p className="questions-intro">
             Questions are filtered automatically from your Company Information selections above.
