@@ -1,0 +1,21 @@
+[
+  {"framework":"TCFD","question_id":"10027","terms":["ghg emissions","scope 1 emissions","scope 2 emissions","scope 3 emissions"],"categories":["environmental"]},
+  {"framework":"TCFD","question_id":"10028","terms":["electricity consumption","energy consumption"],"categories":["environmental"]},
+  {"framework":"BRSR","question_id":"20134","terms":["electricity consumption","energy consumption"],"categories":["environmental"]},
+  {"framework":"BRSR","question_id":"20025","terms":["employee turnover"],"categories":["social"]},
+  {"framework":"BRSR","question_id":"20058","terms":["ethics policy","anti-corruption training"],"categories":["governance"]},
+  {"framework":"BRSR","question_id":"20134","terms":["electricity consumption","energy consumption"],"categories":["environmental"]},
+  {"framework":"BRSR","question_id":"20025","terms":["employee turnover"],"categories":["social"]},
+  {"framework":"BRSR","question_id":"20058","terms":["ethics policy","anti-corruption training"],"categories":["governance"]},
+  {"framework":"SASB","question_id":"30000","terms":["electricity consumption","energy consumption"],"categories":["environmental"]},
+  {"framework":"GRI","question_id":"50157","terms":["water consumption","water withdrawn"],"categories":["environmental"]},
+  {"framework":"GRI","question_id":"50160","terms":["waste generated","waste generation"],"categories":["environmental"]},
+  {"framework":"GRI","question_id":"50136","terms":["scope 1 emissions","greenhouse gas emissions"],"categories":["environmental"]},
+  {"framework":"GRI","question_id":"50137","terms":["scope 2 emissions","greenhouse gas emissions"],"categories":["environmental"]},
+  {"framework":"GRI","question_id":"50138","terms":["scope 3 emissions","greenhouse gas emissions"],"categories":["environmental"]},
+  {"framework":"UNGC","question_id":"40002","terms":["employee count","number of employees"],"categories":["social"]},
+  {"framework":"GRI","question_id":"50022","terms":["employee count","number of employees"],"categories":["social"]},
+  {"framework":"GRI","question_id":"50087","terms":["employee turnover"],"categories":["social"]},
+  {"framework":"GRI","question_id":"50105","terms":["training hours"],"categories":["social"]},
+  {"framework":"GRI","question_id":"50103","terms":["workplace accidents","work-related injuries"],"categories":["social"]}
+]

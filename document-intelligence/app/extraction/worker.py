@@ -148,6 +148,10 @@ async def run_worker(poll_seconds: float = 2.0) -> None:
                         "UPDATE document_extraction_jobs SET status=%s,error_message=%s,updated_at=now(),completed_at=CASE WHEN %s='failed' THEN now() ELSE completed_at END WHERE id=%s",
                         (status, str(error)[:2000], status, job["id"]),
                     )
+                    await connection.execute(
+                        "INSERT INTO document_intelligence_audit_log(organization_id,document_id,action,details) VALUES(%s,%s,%s,%s::jsonb)",
+                        (job["organization_id"], job["id"], f"extraction_{status}", json.dumps({"attempt": job["attempt_count"], "error": str(error)[:1000]})),
+                    )
             if status == "queued":
                 await asyncio.sleep(min(2 ** job["attempt_count"], 30))
 
