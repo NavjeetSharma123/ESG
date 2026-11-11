@@ -385,6 +385,36 @@
   margin-top: var(--space-2);
 }
 
+.extracted-document-results {
+  margin-top: 1.25rem;
+}
+
+.extracted-document-results h3 {
+  margin: 0 0 0.75rem;
+}
+
+.extracted-document-results details {
+  margin: 0.5rem 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border, #d9e2dc);
+  border-radius: 8px;
+  background: var(--color-surface, #fff);
+}
+
+.extracted-document-results summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.extracted-document-results pre {
+  max-height: 24rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  line-height: 1.5;
+}
+
 .questions-filters {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr;

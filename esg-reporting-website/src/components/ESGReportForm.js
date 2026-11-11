@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import './ESGReportForm.css';
 import { supabase } from '../data/SupabaseConfig';
-import { fetchUserProfile } from '../data/supabaseBackend';
+import { EXTRACTED_TEXT_COLUMNS, fetchQuestionnaire, fetchUserProfile, saveExtractedText } from '../data/supabaseBackend';
 import { ALL_FRAMEWORKS, COUNTRY_FRAMEWORKS, COUNTRY_OPTIONS, INDUSTRY_SECTOR_OPTIONS } from '../data/esgOptions';
 import { getAuthSession } from '../utils/auth';
 import {
@@ -29,6 +29,8 @@ const SUPPORTING_DOCUMENTS = [
 
 const FILE_ACCEPT_TYPES = '.pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg';
 const DOCUMENTS_BUCKET = 'Documents';
+const DOCUMENT_EXTRACTION_API = process.env.REACT_APP_DOCUMENT_EXTRACTION_API_URL || 'http://localhost:8000';
+const EXTRACTABLE_DOCUMENT_TYPES = new Set(['pdf', 'png', 'jpg', 'jpeg']);
 
 const fileToDocumentMeta = (file) => ({
   name: file.name,
@@ -220,6 +222,8 @@ const ESGReportForm = () => {
   const [supportingDocuments, setSupportingDocuments] = useState({});
   const [documentStorageStatus, setDocumentStorageStatus] = useState('');
   const [cinFolderName, setCinFolderName] = useState('');
+  const [extractedDocuments, setExtractedDocuments] = useState([]);
+  const [extractingDocuments, setExtractingDocuments] = useState(false);
 
   const handleQuestionAnswer = (id, value, propagate = true) => {
     const normalizedId = normalizeQuestionId(id);
@@ -915,12 +919,47 @@ const ESGReportForm = () => {
     let cancelled = false;
 
     resolveCinFolderName()
-      .then((folderName) => {
+      .then(async (folderName) => {
+        const { data, error } = await supabase.storage
+          .from(DOCUMENTS_BUCKET)
+          .list(folderName, { limit: 1000, sortBy: { column: 'name', order: 'asc' } });
+        if (error) throw error;
         if (cancelled) return;
-        setSupportingDocuments((prev) => filterSupportingDocumentsByFolder(prev, folderName));
+        const restoredDocuments = Object.fromEntries(SUPPORTING_DOCUMENTS.map((documentType) => {
+          const prefix = `${sanitizeDocumentPart(documentType.label, 'Document')}_`;
+          const files = (data || [])
+            .filter((item) => item.name && item.name.startsWith(prefix))
+            .map((item) => ({
+              name: item.name,
+              size: Number(item.metadata?.size) || 0,
+              type: item.metadata?.mimetype || '',
+              lastModified: item.created_at ? new Date(item.created_at).getTime() : 0,
+              documentType: documentType.label,
+              bucket: DOCUMENTS_BUCKET,
+              path: buildDocumentPath(folderName, item.name),
+              uploadedAt: item.created_at || null,
+            }));
+          return [documentType.key, files];
+        }));
+        setSupportingDocuments(restoredDocuments);
+        const questionnaire = await fetchQuestionnaire(getAuthSession());
+        const restoredExtractions = Object.entries(restoredDocuments).flatMap(([documentTypeKey, files]) => {
+          if (!files.length) return [];
+          const markdown = questionnaire?.[EXTRACTED_TEXT_COLUMNS[documentTypeKey]];
+          return markdown ? [{ filename: files.map((file) => file.name).join(', '), markdown, documentTypeKey }] : [];
+        });
+        setExtractedDocuments(restoredExtractions);
+        const storedFiles = (data || []).filter((item) => item.name && item.id);
+        setDocumentStorageStatus(`Loaded ${storedFiles.length} uploaded document${storedFiles.length === 1 ? '' : 's'}.`);
       })
       .catch(() => {
-        if (!cancelled) setSupportingDocuments({});
+        if (!cancelled) {
+          setSupportingDocuments({});
+          setDocumentStorageStatus('Previously uploaded documents could not be loaded. Check Storage access for this organization.');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setExtractingDocuments(false);
       });
 
     return () => {
@@ -953,27 +992,65 @@ const ESGReportForm = () => {
     };
   };
 
+  const extractDocumentText = async (file) => {
+    const extension = getFileExtension(file.name);
+    if (!EXTRACTABLE_DOCUMENT_TYPES.has(extension)) return null;
+
+    const payload = new FormData();
+    payload.append('file', file);
+    const response = await fetch(`${DOCUMENT_EXTRACTION_API.replace(/\/$/, '')}/extract`, {
+      method: 'POST',
+      body: payload,
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.detail || `Extraction failed (${response.status}).`);
+    return result;
+  };
+
   const handleSupportingDocumentChange = async (key, fileList) => {
     const documentType = SUPPORTING_DOCUMENTS.find((item) => item.key === key);
     const files = Array.from(fileList || []);
     if (!documentType || files.length === 0) return;
 
-    setDocumentStorageStatus(`Uploading ${files.length} document${files.length === 1 ? '' : 's'} to Supabase...`);
+    setDocumentStorageStatus(`Uploading ${files.length} document${files.length === 1 ? '' : 's'} ...`);
+    setExtractingDocuments(true);
     setSaveError('');
     try {
       const uploadedFiles = await Promise.all(files.map((file) => uploadSupportingDocument(documentType, file)));
       setSupportingDocuments((prev) => ({ ...prev, [key]: [...(prev[key] || []), ...uploadedFiles] }));
-      setDocumentStorageStatus(`Saved ${files.length} document${files.length === 1 ? '' : 's'} to Supabase.`);
+      const extractionResults = await Promise.all(files.map(async (file) => {
+        try {
+          const result = await extractDocumentText(file);
+          return result ? { filename: result.filename || file.name, markdown: result.markdown || '', documentTypeKey: key } : null;
+        } catch (error) {
+          console.error('Document text extraction failed:', error);
+          return { filename: file.name, error: error.message, documentTypeKey: key };
+        }
+      }));
+      const results = extractionResults.filter(Boolean);
+      if (results.length) {
+        const extractedText = results.map((result) => result.markdown).filter(Boolean).join('\n\n');
+        if (extractedText) await saveExtractedText(getAuthSession(), key, extractedText);
+        setExtractedDocuments((prev) => [
+          ...prev.filter((result) => result.documentTypeKey !== key),
+          ...(extractedText ? [{ filename: results.map((result) => result.filename).join(', '), markdown: extractedText, documentTypeKey: key }] : []),
+        ]);
+      }
+      const extractedCount = results.filter((result) => result.markdown).length;
+      const unsupportedCount = files.length - results.length;
+      setDocumentStorageStatus(`Saved ${files.length} document${files.length === 1 ? '' : 's'}.${extractedCount ? ` Extracted text from ${extractedCount}.` : ''}${unsupportedCount ? ` ${unsupportedCount} file type${unsupportedCount === 1 ? '' : 's'} not supported for extraction.` : ''}`);
       setHasUnsavedChanges(true);
     } catch (error) {
       console.error(error);
       setDocumentStorageStatus('');
-      setSaveError('Document upload failed. Please check Supabase storage access.');
+      setSaveError('Document upload failed. Please check storage access.');
+    } finally {
+      setExtractingDocuments(false);
     }
   };
 
   const removeSupportingDocument = async (key, file) => {
-    setDocumentStorageStatus(`Removing ${file.name} from Supabase...`);
+    setDocumentStorageStatus(`Removing ${file.name}...`);
     try {
       const folderName = await resolveCinFolderName();
       const storagePath = getDocumentPathInFolder(folderName, file);
@@ -985,11 +1062,11 @@ const ESGReportForm = () => {
         ...prev,
         [key]: (prev[key] || []).filter((item) => !(item.name === file.name && item.lastModified === file.lastModified)),
       }));
-      setDocumentStorageStatus('Document removed from Supabase.');
+      setDocumentStorageStatus('Document removed.');
       setHasUnsavedChanges(true);
     } catch (error) {
       console.error(error);
-      setSaveError('Document removal failed. Please check Supabase storage access.');
+      setSaveError('Document removal failed. Please check storage.');
     }
   };
 
@@ -1227,12 +1304,14 @@ const ESGReportForm = () => {
               <h2>Supporting Documents</h2>
               <p>Upload evidence files for audit readiness. Multiple files are allowed for each document type.</p>
               {documentStorageStatus && <p className="field-helper">{documentStorageStatus}</p>}
+              {extractingDocuments && <p className="field-helper">Extracting text from PDFs and images...</p>}
             </div>
             <span>{supportingDocumentsCount} uploaded</span>
           </div>
           <div className="document-upload-grid">
             {SUPPORTING_DOCUMENTS.map((documentType) => {
               const uploadedFiles = companySupportingDocuments[documentType.key] || [];
+              const cardExtractions = extractedDocuments.filter((document) => document.documentTypeKey === documentType.key);
               return (
                 <div className="document-upload-card" key={documentType.key}>
                   <label htmlFor={`doc-${documentType.key}`}>{documentType.label}</label>
@@ -1268,143 +1347,24 @@ const ESGReportForm = () => {
                   ) : (
                     <small className="document-empty">No file selected</small>
                   )}
+                  {cardExtractions.length > 0 && (
+                    <div className="extracted-document-results">
+                      <h3>Extracted text</h3>
+                      {cardExtractions.map((document, index) => (
+                        <details key={`${document.filename}-${index}`}>
+                          <summary>{document.filename}</summary>
+                          {document.error ? <p className="field-helper">{document.error}</p> : <pre>{document.markdown || 'No text was found in this document.'}</pre>}
+                        </details>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
         </section>
 
-        <section hidden="true" className="form-section questions-section">
-          <h2>ESG Question Bank</h2>
-          <p className="questions-intro">
-            Questions are filtered automatically from your Company Information selections above.
-            {companyInfoReady ? (
-              <>
-                {' '}
-                {hasSectorSelection && (
-                  <>
-                   <br/> Sector: <strong>{selectedSector}</strong>
-                  </>
-                )}
-                {hasSectorSelection && hasFrameworkSelection && '; '}
-                {hasFrameworkSelection && (
-                  <>
-                    <br/>Frameworks: <strong>{selectedFrameworks.join(', ')}</strong>
-                  </>
-                )}
-                .
-              </>
-            ) : (
-              ' Universal questions are shown below. Select an industry sector and/or reporting framework to see more.'
-            )}
-          </p>
-
-          {/* <div className="questionnaire-overview" aria-label="Questionnaire completion overview">
-            <div className="questionnaire-overview-copy">
-              <span className="questionnaire-kicker">Questionnaire progress</span>
-              <strong>{filteredAnsweredCount} of {filteredQuestions.length} answered</strong>
-              <small>Completed questions are highlighted in green.</small>
-            </div>
-            <div className="questionnaire-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={filteredCompletionPct} aria-label={`${filteredCompletionPct}% of visible questions answered`}>
-              <div className="questionnaire-progress-ring"><span>{filteredCompletionPct}%</span></div>
-              <div className="questionnaire-progress-track"><span style={{ width: `${filteredCompletionPct}%` }} /></div>
-            </div>
-          </div> */}
-
-          <div className="questions-filters">
-            <div className="form-group">
-              <label htmlFor="questionSearch">Search questions</label>
-              <input
-                type="search"
-                id="questionSearch"
-                value={questionSearch}
-                onChange={(e) => setQuestionSearch(e.target.value)}
-                placeholder="Search questions, frameworks, departments or IDs..."
-                disabled={questionsLoading || !!questionsError}
-              />
-            </div>
-          </div>
-
-          {questionsLoading ? (
-            <p className="questions-status">Loading questions...</p>
-          ) : questionsError ? (
-            <p className="questions-status questions-status-error">{questionsError}</p>
-          ) : (
-            <>
-              <p className="questions-count">
-                {filteredQuestions.length === 0 ? (
-                  companyInfoReady
-                    ? 'No questions match your sector and framework selections.'
-                    : 'No questions to display yet.'
-                ) : (
-                  <>
-                    Showing {filteredQuestions.length} question{filteredQuestions.length === 1 ? '' : 's'}
-                    {selectedDepartments.length > 0
-                      ? ` from ${selectedDepartments.length} department${selectedDepartments.length === 1 ? '' : 's'}`
-                      : ' across all departments'}
-                    {hasSectorSelection && ` for ${selectedSector}`}
-                    {hasFrameworkSelection && ` (${selectedFrameworks.join(', ')})`}
-                  </>
-                )}
-              </p>
-              <div className="questions-table-wrap">
-                <table className="questions-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Questions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredQuestions.length === 0 ? (
-                      <tr>
-                        <td className="questions-empty">
-                          {!companyInfoReady
-                            ? 'Select an industry sector and/or ESG reporting framework to load relevant questions.'
-                            : 'No questions match your current sector and framework filters.'}
-                        </td>
-                      </tr>
-                    ) : (
-                      displayDepartments.map((dep) => {
-                        const deptQuestions = filteredQuestions.filter((q) => q.department === dep);
-                        if (deptQuestions.length === 0) return null;
-                        return (
-                          <React.Fragment key={dep}>
-                            <tr className="questions-dept-header">
-                            { /* <td>{dep}</td> */ }
-                            </tr>
-                            {deptQuestions.map((q) => {
-                              const answered = isAnswered(getAnswer(questionAnswers, q.id));
-                              const missingRequired = (q.required || q.isMandatory || q.mandatory) && showValidation && !answered;
-                              return (
-                              <tr key={q.id} className={`question-row ${answered ? 'question-complete' : ''} ${missingRequired ? 'question-missing' : ''}`}>
-                                <td>
-                                  <div className="question-item">
-                                    <span className={`question-status ${answered ? 'is-complete' : ''}`} aria-label={answered ? 'Answered' : `Question`}>{answered ? '✓' : ''}</span>
-                                    <p className="question-text">{q.question} <span className="tooltip">🛈
-                                      <span className="tooltiptext">{q.guidelines}</span>
-                                    </span></p>
-                                    <div className="question-tags">
-                                      {answered && <span className="question-complete-label">Completed</span>}
-                                      {(q.required || q.isMandatory || q.mandatory) && <span className="question-chip required">Required</span>}
-{/*                                      {String(q.framework || '').split(/[\s,;/]+/).filter(Boolean).map((fw) => <span className="question-chip" key={fw}>{fw}</span>)}
-                                      {getLinkedQuestionIds(q).map((id) => <span className="question-chip linked" key={id}>Linked: #{id}</span>)} */}
-                                    </div>
-                                    <div className="question-answer">{renderQuestionInput(q)}</div>
-                                  </div>
-                                </td>
-                              </tr>
-                              );
-                            })}
-                          </React.Fragment>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-        </section>
+        
 
         <div className="form-actions">
           <button type="button" className="btn btn-secondary btn-lg" onClick={handleSaveProgress} disabled={saving}>

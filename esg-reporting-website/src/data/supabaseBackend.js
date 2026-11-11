@@ -2,6 +2,20 @@ import { supabase } from './SupabaseConfig';
 
 const QUESTIONNAIRE_TABLE = 'questionnaires';
 
+export const EXTRACTED_TEXT_COLUMNS = {
+  financialStatements: 'Extracted Text_Financial Statements',
+  electricityBills: 'Extracted Text_Electricity Bills',
+  fuelInvoices: 'Extracted Text_Fuel Invoices',
+  waterBills: 'Extracted Text_Water Bills',
+  wasteDisposalRecords: 'Extracted Text_Waste Disposal',
+  employeeRegister: 'Extracted Text_Emp Registers',
+  companyPolicies: 'Extracted Text_Company Policies',
+  payrollRegister: 'Extracted Text_Payroll',
+  healthSafetyRegister: 'Extracted Text_Health',
+  supplierList: 'Extracted Text_Supplier',
+  esgCsrEvidence: 'Extracted Text_Evidence',
+};
+
 export const toSession = (user) => ({
   id: user.id,
   username: user.email,
@@ -107,6 +121,7 @@ export const saveQuestionnaire = async (session, draft) => {
       supportingDocumentsCount: draft.supportingDocumentsCount || 0,
     },
     question_json: questionJson,
+    ...Object.fromEntries(Object.entries(draft.extractedTextByType || {}).map(([key, value]) => [EXTRACTED_TEXT_COLUMNS[key], value])),
     updated_at: savedAt,
   };
 
@@ -138,6 +153,30 @@ export const saveQuestionnaire = async (session, draft) => {
     throw new Error(`Unable to save questionnaire to Supabase: ${error.message}`);
   }
   return payload;
+};
+
+export const saveExtractedText = async (session, documentTypeKey, text) => {
+  const column = EXTRACTED_TEXT_COLUMNS[documentTypeKey];
+  if (!column) return;
+  if (!session?.id) throw new Error('Please sign in again before saving extracted text.');
+  const { data: organization, error: organizationError } = await supabase
+    .from('register').select('id, organization_name').eq('id', session.id).maybeSingle();
+  if (organizationError || !organization) throw organizationError || new Error('Organization not found.');
+  const { data: existing, error: lookupError } = await supabase.from(QUESTIONNAIRE_TABLE)
+    .select('organization_id').eq('organization_id', organization.id).limit(1).maybeSingle();
+  if (lookupError) throw lookupError;
+  const updatedAt = new Date().toISOString();
+  const { error } = existing
+    ? await supabase.from(QUESTIONNAIRE_TABLE).update({ [column]: text, updated_at: updatedAt }).eq('organization_id', organization.id)
+    : await supabase.from(QUESTIONNAIRE_TABLE).insert({
+      organization_id: organization.id,
+      organization_name: organization.organization_name || '',
+      metadata: { source: 'ESG', savedAt: updatedAt },
+      question_json: {},
+      [column]: text,
+      updated_at: updatedAt,
+    });
+  if (error) throw error;
 };
 
 export const fetchQuestionnaire = async (session) => {

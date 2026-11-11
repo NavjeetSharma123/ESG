@@ -261,6 +261,10 @@ export const generateInvestorESGReportPDF = ({ companyName, industry, reportingP
   };
 
   const renderDisclosureCard = (question, groupTitle) => {
+    const paragraph = consolidatedParagraphs.find((item) => item.questionIds.includes(String(question.id)));
+    // Consolidated narrative already carries this answer once. Keep unique or
+    // unanswered framework disclosures in the framework sections for coverage.
+    if (paragraph && isAnswered(responseFor(question))) return;
     const answer = responseFor(question);
     if (isProductsServicesQuestion(question) && answer && typeof answer === 'object' && !Array.isArray(answer)) {
       renderProductsServicesDisclosure(answer, groupTitle);
@@ -276,7 +280,6 @@ export const generateInvestorESGReportPDF = ({ companyName, industry, reportingP
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); set('setTextColor', INK);
     doc.text(answerLines, margin + 2, y + 4.3);
     y += answerLines.length * 4.3 + 1;
-    const paragraph = consolidatedParagraphs.find((item) => item.questionIds.includes(String(question.id)));
     const mappedPage = paragraph ? paragraphPages[paragraph.id] : null;
     const [compactStatus] = statusFor(question, answer);
     const referenceLine = `${question.code || question.id} · ${compactStatus}${paragraph ? ` · ${paragraph.id}, p. ${mappedPage || 'see narrative'}` : ''}`;
